@@ -1,4 +1,4 @@
-int relayPin = 12;
+int relayPin = 13;
 int batterInputPin = A0;
 
 class PowerModule{
@@ -59,6 +59,10 @@ void loop() {
       if(val == 0){
         powerModule.disableCharging();
       }else if(val == 1){
+        powerModule.enableCharging();
+      }else if(val == 2){
+        powerModule.enableCharging();
+      }else if(val == 3){
         powerModule.enableCharging();
       }
     }
