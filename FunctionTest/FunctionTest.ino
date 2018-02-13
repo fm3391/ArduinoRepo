@@ -1,3 +1,5 @@
+#include <SimpleTimer.h>
+
 // MD10C - Version: Latest
 #include <MD10C.h>
 
@@ -11,26 +13,43 @@ int mosfetPin = 8;
 int md10cDirPin = 7;
 int md10cPwmPin = 9;
 
+SimpleTimer timer;
+
 ValveController valveController(md10cDirPin, md10cPwmPin, mosfetPin);
 
 int relayPin = 13;
 int batterInputPin = A0;
 
-class PowerModule {
+class ChargeController {
   private:
     int relayCtrlPin;
     int batteryInputPin;
     boolean isCharging = false;
-    const float battMaxAnalog = 700;
     const float battMaxVoltage = 11.75;
-    float batteryVoltage;
-
+    const int batteryMaxVal = 690;
+    const int batteryMinVal = 625;
+    const int chargeCounterMax = 15;
+    int chargeCounter = 0;
   public:
-    PowerModule(int relayCtrlPin, int batteryInputPin) {
+    ChargeController(int relayCtrlPin, int batteryInputPin) {
       this->relayCtrlPin = relayCtrlPin;
       this->batteryInputPin = batteryInputPin;
     }
 
+    float getVoltage(){
+      float voltage = 0.00;
+      if(isCharging){
+        /* Disables charging if isCharging is true */
+        disableCharging();
+      }
+      int batteryVal = analogRead(batteryInputPin);
+      voltage = (((float)batteryVal / batteryMaxVal)*battMaxVoltage)*.035;
+      if(isCharging){
+        /* Re-enables charging if isCharging is true */
+        enableCharging();
+      }
+      return voltage;
+    }
 
     void enableCharging() {
       digitalWrite(this->relayCtrlPin, HIGH);
@@ -40,39 +59,37 @@ class PowerModule {
       digitalWrite(this->relayCtrlPin, LOW);
     }
 
-    float getBatteryVoltage(){
-      batteryVoltage = ((float) analogRead(A0) / battMaxAnalog) * battMaxVoltage;
-      return batteryVoltage;
-    }
-
     void run() {
-      
-      Serial.println("Battery Voltage: " + String(batteryVoltage));
-      getBatteryVoltage();
-      if (batteryVoltage >= 11.00) {
-        disableCharging();
-        isCharging = false;
-      } else if (batteryVoltage <= 9.60) {
-        enableCharging();
-        isCharging = true;
+      // Checks the current state of charging
+      if(isCharging){
+        // Is charging
+        if(chargeCounter == chargeCounterMax){
+          disableCharging();
+          isCharging = false;
+          chargeCounter = 0;
+        }else{
+          chargeCounter++;
+        }
+        
+      }else{
+        // Is not charging
+        int batteryVal = analogRead(batteryInputPin);
+        float voltage = ((float)batteryVal / batteryMaxVal)*battMaxVoltage;
+        if(batteryVal <= batteryMinVal){
+          isCharging = true;
+          enableCharging();
+        }
       }
-
-
     }
-
 };
 
-PowerModule powerModule(relayPin, batterInputPin);
+ChargeController chargeController(relayPin, batterInputPin);
 
 
+void runChargeController(){
+  chargeController.run();
+}
 
-class CommManager{
-  private:
-
-
-  public:
-  
-};
 
 void setup() {
   Serial.begin(9600);
@@ -80,10 +97,17 @@ void setup() {
   pinMode(mosfetPin, OUTPUT);
   pinMode(md10cDirPin, OUTPUT);
   pinMode(md10cPwmPin, OUTPUT);
+  timer.setInterval(60000, runChargeController);
+  runChargeController();
 }
 
 void loop() {
-  while (Serial.available() > 0) {
+timer.run();
+}
+
+
+/*
+ *   while (Serial.available() > 0) {
     int inChar = Serial.read();
     if (isDigit(inChar)) {
       String inString = "";
@@ -94,12 +118,12 @@ void loop() {
       } else if (val == 1) {
         powerModule.enableCharging();
       } else if (val == 2) {
-        valveController.closeValve((int)powerModule.getBatteryVoltage());
+        
       } else if (val == 3) {
-        valveController.openValve((int)powerModule.getBatteryVoltage());
+        
       }
     }
   }
   powerModule.run();
   delay(1000);
-}
+ */
