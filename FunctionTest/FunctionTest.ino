@@ -86,6 +86,21 @@ class ChargeController {
 ChargeController chargeController(relayPin, batterInputPin);
 
 
+
+class MessageManager{
+  private:
+
+  public:
+
+  boolean isMessageAvailable(){
+    boolean messageAvailable = false;
+    if(Serial.available > 0){
+      messageAvailable = true;
+    }
+  }
+};
+
+
 void runChargeController(){
   chargeController.run();
 }
