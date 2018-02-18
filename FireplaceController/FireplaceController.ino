@@ -1,3 +1,9 @@
+// MessageManager - Version: Latest
+#include <MessageManager.h>
+
+// MessageQueue - Version: Latest
+#include <MessageQueue.h>
+
 // ChargeController - Version: Latest
 #include <ChargeController.h>
 
@@ -19,160 +25,42 @@
 
 SimpleTimer timer;
 
-#define vcDirPin 0
-#define vcPwmPin 0
-#define vcMosfetPin 0
+int vcDirPin = 7;
+int vcPwmPin = 9;
+int vcMosfetPin = 8;
 
-#define ccRelayPin 0
-#define ccBattInputPin 0
-
-enum class Mode {
-  TIMED,
-  LOW_POWER,
-  NORMAL
-};
+int ccRelayPin = 12;
+int ccBattInputPin = A0;
 
 
-
-class MessageQueue {
-  private:
-    static const int queueSize = 10;
-    String msgArray[queueSize] = {};
-    int msgCount;
-
-  public:
-    MessageQueue() {
-      this->msgCount = 0;
-    }
-
-    void clearQueue() {
-      for (int i = 0; i < queueSize; i++) {
-        msgArray[i] = "";
-      }
-      msgCount = 0;
-    }
-
-    boolean isEmpty() {
-      boolean isEmpty = true;
-      if (msgCount > 0) {
-        isEmpty = false;
-      }
-
-      return isEmpty;
-    }
-
-    boolean isFull() {
-      boolean isQueueFull = false;
-      if (msgCount == 5) {
-        isQueueFull = true;
-      }
-      return isQueueFull;
-    }
-
-    int getCount(){
-      return msgCount;
-    }
-
-    void enqueMsg(String msg) {
-      if (!isFull()) {
-        if (msgCount == 0) {
-          msgArray[0] = msg;
-        } else {
-          msgArray[msgCount] = msg;
-        }
-        msgCount++;
-        
-      }
-    }
-
-    String dequeMsg() {
-      String msg = msgArray[0];
-      if (msgCount == 1) {
-        clearQueue();
-      } else if (msgCount > 1) {
-        for (int i = 1; i < msgCount; i++) {
-          msgArray[i - 1] = msgArray[i];
-        }
-        msgArray[msgCount] = "";
-        msgCount--;
-      }
-
-      return msg;
-    }
-
-    void printQueueArray() {
-      for (int i = 0; i < msgCount; i++) {
-        Serial.println(msgArray[i]);
-      }
-    }
-
-};
-
-
-
-class MessageManager {
-  private:
-    MessageQueue msgQueue;
-  public:
-    MessageManager() {
-      // NO-OP
-    }
-
-    String getNextMessage() {
-      return msgQueue.dequeMsg();
-    }
-
-    void addMessage(String msg) {
-      msgQueue.enqueMsg(msg);
-    }
-
-    boolean messageAvailable() {
-      return !msgQueue.isEmpty();
-    }
-
-
-    void run() {
-      if (Serial.available() > 0) {
-        String message = "";
-        while (Serial.available() > 0) {
-          char nextChar = Serial.read();
-          if (nextChar == '$') {
-            msgQueue.enqueMsg(message);
-          } else {
-            message.concat(nextChar);
-          }
-        }
-        message = "";
-      }
-    }
-
-};
-
+// Controller Interval Values
+#define chargeControllerInterval 60
+#define messageManagerInterval 0.5
+#define fireplaceControllerInterval 1
 
 MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
-ValveController valveController(vcDirPin, vcPwmPin, vcMosfetPin);
 
 class FireplaceController {
   private:
     MessageManager *messageManager;
-    Mode mode;
-
+    ChargeController *chargeController;
+    ValveController valveController;
 
   public:
-    FireplaceController(MessageManager &messageManager) {
-      this->mode = Mode::NORMAL;
-      this->messageManager = &messageManager;
+    FireplaceController(MessageManager &messageManagerIn, ChargeController &chargeControllerIn)
+      : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
+      this->messageManager = &messageManagerIn;
+      this->chargeController = &chargeControllerIn;
     }
 
     void run() {
-      while(messageManager->messageAvailable()){
-        Serial.println(messageManager->getNextMessage());
-      }
+
+
     }
 };
 
-FireplaceController fireplaceController(messageManager);
+FireplaceController fireplaceController(messageManager, chargeController);
 
 void runFireplaceController() {
   fireplaceController.run();
@@ -183,13 +71,21 @@ void runMessageManager() {
 }
 
 void runChargeController() {
-  //chargeController.run();
+  chargeController.run();
 }
 
 void setup() {
-  Serial.begin(38400);
-  timer.setInterval(1000, runMessageManager);
-  timer.setInterval(10000, runFireplaceController);
+  Serial.begin(9600);
+  pinMode(ccRelayPin, OUTPUT);
+  pinMode(vcMosfetPin, OUTPUT);
+  pinMode(vcDirPin, OUTPUT);
+  pinMode(vcPwmPin, OUTPUT);
+  digitalWrite(ccRelayPin, LOW);
+  digitalWrite(vcMosfetPin, LOW);
+  //timer.setInterval(messageManagerInterval * 1000, runMessageManager);
+  timer.setInterval(fireplaceControllerInterval * 1000, runFireplaceController);
+  chargeController.run();
+  timer.setInterval(chargeControllerInterval * 1000, runChargeController);
 }
 
 void loop() {
