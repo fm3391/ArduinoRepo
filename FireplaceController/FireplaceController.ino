@@ -1,3 +1,5 @@
+#include <ValveControllerState.h>
+
 // MessageManager - Version: Latest
 #include <MessageManager.h>
 
@@ -23,21 +25,16 @@
 
 */
 
+
+// Pin Declarations
+int vcDirPin = 7; // ValveController DIR pin
+int vcPwmPin = 9; // ValveController PWM pin
+int vcMosfetPin = 8; // ValveController Mosfet pin
+
+int ccRelayPin = 12; // ChargeController Relay pin
+int ccBattInputPin = A0; // ChargeController Input pin
+
 SimpleTimer timer;
-
-int vcDirPin = 7;
-int vcPwmPin = 9;
-int vcMosfetPin = 8;
-
-int ccRelayPin = 12;
-int ccBattInputPin = A0;
-
-
-// Controller Interval Values
-#define chargeControllerInterval 60
-#define messageManagerInterval 0.5
-#define fireplaceControllerInterval 1
-
 MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
 
@@ -56,6 +53,7 @@ class FireplaceController {
 
     void run() {
 
+    Serial.println(String(chargeController->getVoltage()));
 
     }
 };
@@ -75,17 +73,23 @@ void runChargeController() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   pinMode(ccRelayPin, OUTPUT);
   pinMode(vcMosfetPin, OUTPUT);
   pinMode(vcDirPin, OUTPUT);
   pinMode(vcPwmPin, OUTPUT);
   digitalWrite(ccRelayPin, LOW);
   digitalWrite(vcMosfetPin, LOW);
-  //timer.setInterval(messageManagerInterval * 1000, runMessageManager);
-  timer.setInterval(fireplaceControllerInterval * 1000, runFireplaceController);
+
+
   chargeController.run();
-  timer.setInterval(chargeControllerInterval * 1000, runChargeController);
+  messageManager.run();
+
+
+  timer.setInterval(500, runMessageManager);
+  timer.setInterval(5000, runFireplaceController);
+  timer.setInterval(60000, runChargeController);
+
 }
 
 void loop() {
