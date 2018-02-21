@@ -52,8 +52,7 @@ class FireplaceController {
     }
 
     void run() {
-
-    Serial.println(String(chargeController->getVoltage()));
+    chargeController->updateVoltage();
 
     }
 };
@@ -72,8 +71,12 @@ void runChargeController() {
   chargeController.run();
 }
 
+void runTest() {
+  chargeController.updateVoltage();
+}
+
 void setup() {
-  Serial.begin(38400);
+  Serial.begin(38400); 
   pinMode(ccRelayPin, OUTPUT);
   pinMode(vcMosfetPin, OUTPUT);
   pinMode(vcDirPin, OUTPUT);
@@ -85,11 +88,10 @@ void setup() {
   chargeController.run();
   messageManager.run();
 
-
-  timer.setInterval(500, runMessageManager);
-  timer.setInterval(5000, runFireplaceController);
+  //timer.setInterval(500, runMessageManager);
+  //timer.setInterval(1000, runFireplaceController);
   timer.setInterval(60000, runChargeController);
-
+  timer.setInterval(2000, runTest);
 }
 
 void loop() {

@@ -15,8 +15,11 @@ class ChargeController {
 		int relayCtrlPin;
 		int batteryInputPin;
 		bool isCharging = false;
-		const float battMaxVoltage = 11.75;
-		const float battMinVoltage = 10.00;
+		const float battMaxVoltage = 10.20;
+		const float battMinVoltage = 9.90;
+		const float multiplier = 0.01;
+		int chargeCounter = 0;
+		const int chargeCounterMax = 10;
 		float voltage = 0.00;
 
 	void enableCharging(){

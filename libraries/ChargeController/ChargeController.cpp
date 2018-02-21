@@ -16,7 +16,9 @@ ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 }
 
 void ChargeController::updateVoltage(){
-	this->voltage = (analogRead(batteryInputPin) * 0.01635);
+	int inputVal = analogRead(batteryInputPin);
+	this->voltage = inputVal * this->multiplier;
+	Serial.println(String(this->voltage) + " / " + String(inputVal));
 }
 
 float ChargeController::getVoltage(){
@@ -24,21 +26,29 @@ float ChargeController::getVoltage(){
 }
 
 void ChargeController::run(){
-	updateVoltage();
 	// Checks the current state of charging
 	if(isCharging){
-		if(voltage >= battMaxVoltage){
+		if(chargeCounter == chargeCounterMax){
 			disableCharging();
-			isCharging = false;
+			updateVoltage();
+			if(this->voltage < battMaxVoltage){
+				enableCharging();
+				chargeCounter = 5;
+			}else{
+				isCharging = false;
+			}
+		}else{
+			chargeCounter++;
 		}
 
 	}else{
 		// Is not charging
 		// Check to see if the battery needs to be charging
-		
-		if(voltage < battMinVoltage){
-			enableCharging();
+		updateVoltage();
+		if(this->voltage < battMinVoltage){
 			isCharging = true;
+			enableCharging();
+			chargeCounter = 0;
 		}
 		
 	}
