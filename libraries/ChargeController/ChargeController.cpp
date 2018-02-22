@@ -17,8 +17,8 @@ ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
-	this->voltage = inputVal * this->multiplier;
-	Serial.println(String(this->voltage) + " / " + String(inputVal));
+	this->voltage = (float)inputVal/(float)1023 * battMaxVoltage;
+	Serial.println("Voltage: "+String(this->voltage)+" | inputVal: " + String(inputVal));
 }
 
 float ChargeController::getVoltage(){

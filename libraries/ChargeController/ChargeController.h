@@ -16,8 +16,7 @@ class ChargeController {
 		int batteryInputPin;
 		bool isCharging = false;
 		const float battMaxVoltage = 10.20;
-		const float battMinVoltage = 9.90;
-		const float multiplier = 0.01;
+		const float battMinVoltage = 9.60;
 		int chargeCounter = 0;
 		const int chargeCounterMax = 10;
 		float voltage = 0.00;
