@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="14.2">
-  <zoom_level>10</zoom_level>
+  <zoom_level>7</zoom_level>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>530</x>
-      <y>220</y>
-      <w>190</w>
-      <h>180</h>
+      <x>455</x>
+      <y>154</y>
+      <w>133</w>
+      <h>126</h>
     </coordinates>
     <panel_attributes>FireplaceManager
 --
@@ -19,10 +19,10 @@ run():void</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>530</x>
-      <y>480</y>
-      <w>240</w>
-      <h>200</h>
+      <x>455</x>
+      <y>336</y>
+      <w>168</w>
+      <h>140</h>
     </coordinates>
     <panel_attributes>ValveController
 --
@@ -41,10 +41,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>610</x>
-      <y>390</y>
-      <w>30</w>
-      <h>110</h>
+      <x>511</x>
+      <y>273</y>
+      <w>21</w>
+      <h>77</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;90.0</additional_attributes>
@@ -52,10 +52,10 @@ run():void</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>810</x>
-      <y>310</y>
-      <w>260</w>
-      <h>140</h>
+      <x>651</x>
+      <y>217</y>
+      <w>182</w>
+      <h>98</h>
     </coordinates>
     <panel_attributes>MessageManager
 --
@@ -71,10 +71,10 @@ run():void</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>610</x>
-      <y>790</y>
-      <w>390</w>
-      <h>120</h>
+      <x>511</x>
+      <y>553</y>
+      <w>273</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>MD10C
 --
@@ -89,10 +89,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>490</x>
-      <y>670</y>
-      <w>80</w>
-      <h>140</h>
+      <x>427</x>
+      <y>469</y>
+      <w>56</w>
+      <h>98</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>60.0;10.0;60.0;60.0;10.0;60.0;10.0;120.0</additional_attributes>
@@ -100,10 +100,10 @@ run():void</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>410</x>
-      <y>790</y>
-      <w>190</w>
-      <h>120</h>
+      <x>371</x>
+      <y>553</y>
+      <w>133</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>Mosfet
 --
@@ -116,39 +116,10 @@ run():void</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>0</x>
-      <y>340</y>
-      <w>470</w>
-      <h>310</h>
-    </coordinates>
-    <panel_attributes>ChargeController
---
-- relayCtrlPin:int 
-- batteryInputPin:int
-- isCharging:bool=false
-- battMaxVoltage: const float=10.20
-- battMinVoltage:const float=9.90
-- multiplier:const float=0.01
-- chargeCounter:int=0
-- chargeCounterMax:const int=10
-- voltage:float=0.00
-- enableCharging():void
-- disableCharging():void
-
---
-+ ChargeController(int relayCtrlPin, int batteryInputPin):ChargeController
-+ getVoltage():float
-+ updateVoltage():void
-+ run():void</panel_attributes>
-    <additional_attributes/>
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>990</x>
-      <y>540</y>
-      <w>240</w>
-      <h>220</h>
+      <x>777</x>
+      <y>378</y>
+      <w>168</w>
+      <h>154</h>
     </coordinates>
     <panel_attributes>MessageQueue
 --
@@ -169,10 +140,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>980</x>
-      <y>440</y>
-      <w>80</w>
-      <h>120</h>
+      <x>770</x>
+      <y>308</y>
+      <w>56</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;60.0;60.0;60.0;60.0;100.0</additional_attributes>
@@ -180,10 +151,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>670</x>
-      <y>670</y>
-      <w>30</w>
-      <h>140</h>
+      <x>553</x>
+      <y>469</y>
+      <w>21</w>
+      <h>98</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;120.0</additional_attributes>
@@ -191,10 +162,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>670</x>
-      <y>260</y>
-      <w>260</w>
-      <h>210</h>
+      <x>553</x>
+      <y>182</y>
+      <w>182</w>
+      <h>147</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;140.0;10.0;190.0;90.0;190.0;90.0;10.0;240.0;10.0;240.0;50.0</additional_attributes>
@@ -202,21 +173,21 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>410</x>
-      <y>270</y>
-      <w>180</w>
-      <h>200</h>
+      <x>371</x>
+      <y>189</y>
+      <w>126</w>
+      <h>140</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>160.0;130.0;160.0;180.0;90.0;180.0;90.0;10.0;10.0;10.0;10.0;70.0</additional_attributes>
+    <additional_attributes>160.0;130.0;160.0;180.0;90.0;180.0;90.0;10.0;10.0;10.0;10.0;80.0</additional_attributes>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>530</x>
+      <x>455</x>
       <y>0</y>
-      <w>190</w>
-      <h>90</h>
+      <w>133</w>
+      <h>63</h>
     </coordinates>
     <panel_attributes>main
 --
@@ -226,10 +197,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>610</x>
-      <y>80</y>
-      <w>30</w>
-      <h>160</h>
+      <x>511</x>
+      <y>56</y>
+      <w>21</w>
+      <h>112</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;140.0</additional_attributes>
@@ -237,10 +208,10 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>680</x>
-      <y>80</y>
-      <w>290</w>
-      <h>250</h>
+      <x>560</x>
+      <y>56</y>
+      <w>203</w>
+      <h>175</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;80.0;270.0;80.0;270.0;230.0</additional_attributes>
@@ -248,21 +219,21 @@ run():void</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>350</x>
-      <y>80</y>
-      <w>220</w>
-      <h>280</h>
+      <x>329</x>
+      <y>56</y>
+      <w>154</w>
+      <h>203</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-</panel_attributes>
-    <additional_attributes>200.0;10.0;200.0;80.0;10.0;80.0;10.0;260.0</additional_attributes>
+    <additional_attributes>200.0;10.0;200.0;80.0;10.0;80.0;10.0;270.0</additional_attributes>
   </element>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>790</x>
-      <y>640</y>
-      <w>160</w>
-      <h>90</h>
+      <x>637</x>
+      <y>448</y>
+      <w>112</w>
+      <h>63</h>
     </coordinates>
     <panel_attributes>&lt;&lt;enumeration&gt;&gt;
 ValveControllerState
@@ -274,12 +245,27 @@ OPEN</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>760</x>
-      <y>550</y>
-      <w>130</w>
-      <h>110</h>
+      <x>616</x>
+      <y>385</y>
+      <w>91</w>
+      <h>77</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;.</panel_attributes>
     <additional_attributes>110.0;90.0;110.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>126</x>
+      <y>245</y>
+      <w>287</w>
+      <h>231</h>
+    </coordinates>
+    <panel_attributes>ChargeController
+--
+
+--
+run():void</panel_attributes>
+    <additional_attributes/>
   </element>
 </diagram>

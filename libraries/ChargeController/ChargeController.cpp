@@ -18,7 +18,6 @@ ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
 	this->voltage = (float)inputVal/(float)1023 * battMaxVoltage;
-	Serial.println("Voltage: "+String(this->voltage)+" | inputVal: " + String(inputVal));
 }
 
 float ChargeController::getVoltage(){
@@ -27,6 +26,7 @@ float ChargeController::getVoltage(){
 
 void ChargeController::run(){
 	// Checks the current state of charging
+	Serial.println("Voltage: " + String(voltage));
 	if(isCharging){
 		if(chargeCounter == chargeCounterMax){
 			disableCharging();
