@@ -29,12 +29,14 @@ boolean MessageManager::messageAvailable() {
 
 
 void MessageManager::run() {
-  String msg = "";
+  
   if (Serial.available() > 0) {
+	  String msg = "";
 	  while(Serial.available() > 0){
 		 char nextChar = Serial.read();
 		 if(nextChar == '$'){
 			addMessage(msg);
+			Serial.println("Added Message:" + msg);
 			msg = "";
 		 }else{
 			 msg.concat(nextChar);

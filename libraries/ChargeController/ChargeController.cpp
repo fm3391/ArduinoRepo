@@ -6,18 +6,31 @@
  */
 #include "Arduino.h"
 #include "ChargeController.h"
-
+#include "BatteryStatus.h"
 
 ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 	this->relayCtrlPin = relayCtrlPin;
 	this->batteryInputPin = batteryInputPin;
 	updateVoltage();
-	
 }
 
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
 	this->voltage = (float)inputVal/(float)1023 * battMaxVoltage;
+}
+
+BatteryStatus ChargeController::getBatteryStatus(){
+	BatteryStatus status;
+	if(voltage > 11.00){
+		status = BatteryStatus::FULL;
+	}else if(voltage > 9.60){
+		status = BatteryStatus::GOOD;
+	}else if(voltage > 8.50){
+		status = BatteryStatus::WARNING;
+	}else{
+		status = BatteryStatus::DEPLETED;
+	}
+	return status;
 }
 
 float ChargeController::getVoltage(){
@@ -26,7 +39,6 @@ float ChargeController::getVoltage(){
 
 void ChargeController::run(){
 	// Checks the current state of charging
-	Serial.println("Voltage: " + String(voltage));
 	if(isCharging){
 		if(chargeCounter == chargeCounterMax){
 			disableCharging();

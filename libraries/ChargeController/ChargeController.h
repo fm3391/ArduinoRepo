@@ -9,6 +9,7 @@
 #define ChargeController_h
 
 #include "Arduino.h"
+#include "BatteryStatus.h"
 
 class ChargeController {
 	private:
@@ -31,6 +32,7 @@ class ChargeController {
 	public:
 		ChargeController(int relayCtrlPin, int batteryInputPin);
 		float getVoltage();
+		BatteryStatus getBatteryStatus();
 		void updateVoltage();
 		void run();
 
