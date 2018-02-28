@@ -1,6 +1,6 @@
 #include <ValveControllerState.h>
 #include <MessageManager.h>
-#include <MessageQueue.h>
+#include <SimpleQueue.h>
 #include <ChargeController.h>
 #include <ValveController.h>
 #include <Mosfet.h>
@@ -49,6 +49,24 @@ class FireplaceController {
       this->chargeController->run();
     }
 
+    void parseMessage(String msg, SimpleQueue &queue) {
+      String identifier = "";
+
+      for (int i = 0; i < msg.length(); i++) {
+        if (i == msg.length()-1) {
+          identifier = identifier + msg.charAt(i);
+          queue.push(identifier);
+          break;
+        }
+        else if (msg.charAt(i) == ':') {
+          queue.push(identifier);
+          identifier = "";
+        } else {
+          identifier = identifier + msg.charAt(i);
+        }
+      }
+    }
+
   public:
     FireplaceController(MessageManager &messageManagerIn, ChargeController &chargeControllerIn)
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
@@ -58,10 +76,18 @@ class FireplaceController {
     }
 
     void run() {
-      while(messageManager->messageAvailable()){
-        String msg = messageManager->getNextMessage();
-
-        Serial.println("Processed Message: "+msg);
+      while (messageManager->availableInboundMsg()) {
+        String message = messageManager->getInboundMessage();
+        SimpleQueue tmpQueue;
+        parseMessage(message, tmpQueue);
+        for(int i=0; i< tmpQueue.count(); i++){
+          Serial.print(tmpQueue.elementAt(i));
+          if(i != tmpQueue.count()-1){
+          Serial.print(',');
+          }else{
+            Serial.println();
+          }
+        }
       }
     }
 };

@@ -19,7 +19,7 @@ class ChargeController {
 		const float battMaxVoltage = 11.25;
 		const float battMinVoltage = 10.00;
 		int chargeCounter = 0;
-		const int chargeCounterMax = 10;
+		const int chargeCounterMax = 20;
 		float voltage = 0.00;
 
 	void enableCharging(){

@@ -9,17 +9,18 @@
 #define MessageManager_h
 
 #include "Arduino.h"
-#include "MessageQueue.h"
+#include "SimpleQueue.h"
 
 class MessageManager {
   private:
-	MessageQueue msgQueue;
+	SimpleQueue inboundMsgQueue;
+	SimpleQueue outboundMsgQueue;
 
   public:
 	MessageManager();
-	String getNextMessage();
-	void addMessage(String msg);
-	boolean messageAvailable();
+	void addOutboundMsg(String msg);
+	String getInboundMessage();
+	bool availableInboundMsg();
 	void run();
 		
 };
