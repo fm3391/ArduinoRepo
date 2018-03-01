@@ -27,6 +27,24 @@ bool MessageManager::availableInboundMsg(){
 	return msgAvailable;
 }
 
+void MessageManager::parseMessage(String msg, SimpleQueue &queue) {
+  String identifier = "";
+
+  for (int i = 0; i < msg.length(); i++) {
+    if (i == msg.length() - 1) {
+      identifier = identifier + msg.charAt(i);
+      queue.push(identifier);
+      break;
+    }
+    else if (msg.charAt(i) == ':') {
+      queue.push(identifier);
+      identifier = "";
+    } else {
+      identifier = identifier + msg.charAt(i);
+    }
+  }
+}
+
 void MessageManager::run() {
 	
   if(!outboundMsgQueue.empty()){

@@ -1,3 +1,4 @@
+/* Included Libraries */
 #include <ValveControllerState.h>
 #include <MessageManager.h>
 #include <SimpleQueue.h>
@@ -9,7 +10,7 @@
 #include <BatteryStatus.h>
 
 /*
-
+  Description: 
 */
 
 // Pin Declarations
@@ -22,6 +23,9 @@ const int ccBattInputPin = A0; // ChargeController Input pin
 
 const int btMosfetPin = 5; // Mosfet that controls HC-05 module
 const int btStatePin = 6; // Pin that indicate connection status
+
+const int overrideOnPin = 10;
+const int overrideOffPin = 11;
 
 
 enum class FireplaceStatus {
@@ -43,28 +47,59 @@ class FireplaceController {
     ValveController valveController;
 
     void init() {
-      this->fireplaceStatus = FireplaceStatus::OFF;
-      this->mode = SystemMode::NORMAL;
-      this->messageManager->run();
-      this->chargeController->run();
+      chargeController->run();
+      mode = SystemMode::NORMAL;
+      messageManager->run();
+      fireplaceStatus = FireplaceStatus::OFF;
+      valveController.closeValve(chargeController->getVoltage()); 
     }
 
-    void parseMessage(String msg, SimpleQueue &queue) {
-      String identifier = "";
 
-      for (int i = 0; i < msg.length(); i++) {
-        if (i == msg.length()-1) {
-          identifier = identifier + msg.charAt(i);
-          queue.push(identifier);
-          break;
-        }
-        else if (msg.charAt(i) == ':') {
-          queue.push(identifier);
-          identifier = "";
-        } else {
-          identifier = identifier + msg.charAt(i);
+    void handleRequestMessage(SimpleQueue &queueIn){
+      String reqType = queueIn.elementAt(1);
+      if(reqType == "BATT"){
+        
+      }else if(reqType == "FIRE"){
+        
+      }
+    }
+
+    void processMessages() {
+      while(messageManager->availableInboundMsg()){
+        SimpleQueue tmpQueue;
+        String msg = messageManager->getInboundMessage();
+        messageManager->parseMessage(msg, tmpQueue);
+        String msgIdentifier = tmpQueue.elementAt(0);
+        if(msgIdentifier == "REQ"){
+          handleRequestMessage(tmpQueue);
+        }else if(msgIdentifier == "CMD"){
+          if(mode != SystemMode::OVERRIDE){
+            
+          }
         }
       }
+    }
+
+    void handleOverrideMode() {
+      if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus == FireplaceStatus::OFF) {
+        valveController.openValve(chargeController->getVoltage());
+        fireplaceStatus = FireplaceStatus::RUNNING;
+      } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus == FireplaceStatus::RUNNING) {
+        valveController.closeValve(chargeController->getVoltage());
+        fireplaceStatus = FireplaceStatus::OFF;
+      } else {
+        mode = SystemMode::NORMAL;
+      }
+      // Process inbound messages
+      processMessages();
+    }
+
+    void handleNormalMode() {
+
+    }
+
+    void handleLowBattMode() {
+
     }
 
   public:
@@ -76,18 +111,16 @@ class FireplaceController {
     }
 
     void run() {
-      while (messageManager->availableInboundMsg()) {
-        String message = messageManager->getInboundMessage();
-        SimpleQueue tmpQueue;
-        parseMessage(message, tmpQueue);
-        for(int i=0; i< tmpQueue.count(); i++){
-          Serial.print(tmpQueue.elementAt(i));
-          if(i != tmpQueue.count()-1){
-          Serial.print(',');
-          }else{
-            Serial.println();
-          }
-        }
+      switch (mode) {
+        case SystemMode::OVERRIDE:
+          handleOverrideMode();
+          break;
+        case SystemMode::NORMAL:
+          handleNormalMode();
+          break;
+        case SystemMode::LOW_BATT:
+          handleLowBattMode();
+          break;
       }
     }
 };

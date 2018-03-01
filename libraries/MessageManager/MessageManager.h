@@ -21,6 +21,7 @@ class MessageManager {
 	void addOutboundMsg(String msg);
 	String getInboundMessage();
 	bool availableInboundMsg();
+	void parseMessage(String msg, SimpleQueue &queue);
 	void run();
 		
 };
