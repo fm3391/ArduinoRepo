@@ -6,31 +6,31 @@
  */
 #include "Arduino.h"
 #include "ChargeController.h"
-#include "BatteryStatus.h"
 
 ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 	this->relayCtrlPin = relayCtrlPin;
 	this->batteryInputPin = batteryInputPin;
-	updateVoltage();
+	this->voltage = 0.00;
+	batteryLevel = 0;
 }
 
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
-	this->voltage = (float)inputVal/(float)1023 * battMaxVoltage;
+	voltage = (float)inputVal/(float)1023 * nominalVoltage;
+	if(voltage > 11.00){
+		batteryLevel = 3;
+	}else if(voltage > 10.00){
+		batteryLevel = 2;
+	}else if(voltage > 9.60){
+		batteryLevel = 1;
+	}else{
+		batteryLevel = 0;
+	}
+	Serial.println(String(this->voltage));
 }
 
-BatteryStatus ChargeController::getBatteryStatus(){
-	BatteryStatus status;
-	if(voltage > 11.00){
-		status = BatteryStatus::FULL;
-	}else if(voltage > 9.60){
-		status = BatteryStatus::GOOD;
-	}else if(voltage > 8.50){
-		status = BatteryStatus::WARNING;
-	}else{
-		status = BatteryStatus::DEPLETED;
-	}
-	return status;
+int ChargeController::getBatteryLevel(){
+	return batteryLevel;
 }
 
 float ChargeController::getVoltage(){
@@ -43,7 +43,7 @@ void ChargeController::run(){
 		if(chargeCounter == chargeCounterMax){
 			disableCharging();
 			updateVoltage();
-			if(this->voltage < battMaxVoltage){
+			if(this->voltage < nominalVoltage){
 				enableCharging();
 				chargeCounter = 5;
 			}else{
@@ -57,7 +57,7 @@ void ChargeController::run(){
 		// Is not charging
 		// Check to see if the battery needs to be charging
 		updateVoltage();
-		if(this->voltage < battMinVoltage){
+		if(this->voltage < minVoltage){
 			isCharging = true;
 			enableCharging();
 			chargeCounter = 0;
