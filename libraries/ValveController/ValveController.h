@@ -11,13 +11,13 @@
 #include "Arduino.h"
 #include "Mosfet.h"
 #include "MD10C.h"
-#include "ValveControllerState.h"
+#include "ValveControllerStateEnum.h"
 
 class ValveController {
 private:
   const float maxVoltageOut = 6.0;
   const float maxPwmOut = 254.0;
-  ValveControllerState state;
+  ValveControllerStateEnum state;
   MD10C md10c;
   Mosfet mosfet;
   void cycle();
@@ -26,7 +26,7 @@ public:
   ValveController(int dirPin,int pwmPin,int mosfetPin);
   void openValve(int battVoltage);
   void closeValve(int battVoltage);
-  ValveControllerState getState();
+  ValveControllerStateEnum getState();
 };
 
 #endif

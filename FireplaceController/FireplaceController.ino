@@ -1,5 +1,4 @@
 /* Included Libraries */
-#include <ValveControllerState.h>
 #include <MessageManager.h>
 #include <SimpleQueue.h>
 #include <ChargeController.h>
@@ -7,10 +6,14 @@
 #include <Mosfet.h>
 #include <MD10C.h>
 #include <SimpleTimer.h>
+#include <ValveControllerStateEnum.h>
 
 
 /*
-  Description: 
+  Description:
+
+  References: 
+  - https://www.baldengineer.com/state-machine-with-enum-tutorial.html
 */
 
 // Pin Declarations
@@ -28,22 +31,24 @@ const int overrideOnPin = 10; // TODO
 const int overrideOffPin = 11; // TODO
 
 
-
-enum class SystemMode{
-  LOW_BATT,OVERRIDE,NORMAL
+enum RequestType {
+  BATT, FIRE
+};
+enum SystemMode {
+  LOW_BATT, OVERRIDE, NORMAL
 };
 
-bool overrideOnSelected(){
+bool overrideOnSelected() {
   boolean isSelected = false;
-  if(digitalRead(overrideOnPin) == HIGH){
+  if (digitalRead(overrideOnPin) == HIGH) {
     isSelected = true;
   }
   return isSelected;
 }
 
-bool overrideOffSelected(){
+bool overrideOffSelected() {
   boolean isSelected = false;
-  if(digitalRead(overrideOffPin) == HIGH){
+  if (digitalRead(overrideOffPin) == HIGH) {
     isSelected = true;
   }
   return isSelected;
@@ -56,46 +61,86 @@ class FireplaceController {
     ChargeController *chargeController;
     ValveController valveController;
     bool isInit = false;
-    int fireplaceState = 0;
 
-    void processMessages(){
-      while(messageManager->availableInboundMsg()){
+    void startFireplace() {
+      if (valveController.getState() != ValveControllerStateEnum::OPEN) {
+        valveController.openValve(chargeController->getVoltage());
+      }
+    }
+
+    void stopFireplace() {
+      if (valveController.getState() != ValveControllerStateEnum::CLOSED){
+        valveController.closeValve(chargeController->getVoltage());
+      }
+    }
+
+    void sendRequest(RequestType reqType) {
+      String msg = "";
+      switch (reqType) {
+        case RequestType::BATT:
+          msg = "INFO:BATT:" + String(chargeController->getBatteryLevel());
+          break;
+        case RequestType::FIRE:
+         // msg = "INFO:FIRE:" + valveController.getState();
+          break;
+      };
+      if (msg != "") {
+        messageManager->addOutboundMsg(msg);
+      }
+    }
+
+    void processMessages() {
+      
+      while (messageManager->availableInboundMsg()) {
         String msg = messageManager->getInboundMessage();
         SimpleQueue tmpQueue;
         messageManager->parseMessage(msg, tmpQueue);
-        if(tmpQueue.elementAt(0) == "REQ"){
-          String infoMsg = "";
-          if(tmpQueue.elementAt(1) == "BATT"){
-            infoMsg = "INFO:BATT:"+String(chargeController->getBatteryLevel());
-          }else if(tmpQueue.elementAt(1) == "FIRE"){
-            infoMsg = "INFO:FIRE:"+String(fireplaceState);
+        if (tmpQueue.elementAt(0) == "REQ") {
+          String reqElement = tmpQueue.elementAt(1);
+          if (reqElement == "BATT") {
+            sendRequest(RequestType::BATT);
+          } else if (reqElement == "FIRE") {
+            sendRequest(RequestType::FIRE);
+          } else if (reqElement == "ALL") {
+            sendRequest(RequestType::BATT);
+            delay(100);
+            sendRequest(RequestType::FIRE);
           }
-          if(infoMsg != ""){
-            messageManager->addOutboundMsg(infoMsg);
-          }
-        }else if(tmpQueue.elementAt(0) == "CMD"){
-          
+        } else if (tmpQueue.elementAt(0) == "CMD") {
+          if (mode != SystemMode::OVERRIDE) {
+            if (tmpQueue.elementAt(1) == "FIRE") {
+              String cmdVal = tmpQueue.elementAt(2);
+              if (cmdVal == "ON") {
 
+              } else if (cmdVal == "OFF") {
+
+              }
+
+            }
+          }
         }
       }
     }
 
     void handleOverrideMode() {
-      if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus == FireplaceStatus::OFF) {
+      /*
+        if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus == FireplaceStatus::OFF) {
         valveController.openValve(chargeController->getVoltage());
         fireplaceStatus = FireplaceStatus::RUNNING;
-      } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus == FireplaceStatus::RUNNING) {
+        } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus == FireplaceStatus::RUNNING) {
         valveController.closeValve(chargeController->getVoltage());
         fireplaceStatus = FireplaceStatus::OFF;
-      } else {
+        } else {
         mode = SystemMode::NORMAL;
-      }
-      // Process inbound messages
-      processMessages();
+        }
+        // Process inbound messages
+        processMessages();
+      */
     }
 
     void handleNormalMode() {
-
+      // Process inbound messages
+      processMessages();
     }
 
     void handleLowBattMode() {
@@ -107,12 +152,14 @@ class FireplaceController {
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
       this->messageManager = &messageManagerIn;
       this->chargeController = &chargeControllerIn;
-      
+
     }
 
     void run() {
-      if(!isInit){
-        if(chargeController->getBatteryLevel() == 0){
+      
+      if (!isInit) {
+        chargeController->run();
+        if (chargeController->getBatteryLevel() == 0) {
           mode = SystemMode::LOW_BATT;
         }
         isInit = true;

@@ -6,10 +6,10 @@
  */
 #include "Arduino.h"
 #include "ValveController.h"
-#include "ValveControllerState.h"
+#include "ValveControllerStateEnum.h"
 
-ValveController::ValveController(int dirPin,int pwmPin,int mosfetPin):md10c(dirPin,pwmPin), mosfet(mosfetPin){	this->state = ValveControllerState::CLOSED;}
-ValveControllerState ValveController::getState(){
+ValveController::ValveController(int dirPin,int pwmPin,int mosfetPin):md10c(dirPin,pwmPin), mosfet(mosfetPin){	this->state = ValveControllerStateEnum::CLOSED;}
+ValveControllerStateEnum ValveController::getState(){
 	return state;
 }
 void ValveController::openValve(int battVoltage) { 
@@ -22,7 +22,7 @@ md10c.setPwm((int) pwmVal);
 delay(1000);
 md10c.setPwm(0);
 mosfet.setGate(LOW);
-this->state = ValveControllerState::OPEN;}
+this->state = ValveControllerStateEnum::OPEN;}
 
 void ValveController::closeValve(int battVoltage) {
 Serial.println("Closing Valve");mosfet.setGate(HIGH);
@@ -33,4 +33,4 @@ md10c.setPwm((int) pwmVal);
 delay(1000);
 md10c.setPwm(0);
 mosfet.setGate(LOW);
-this->state = ValveControllerState::CLOSED;}
+this->state = ValveControllerStateEnum::CLOSED;}

@@ -26,7 +26,7 @@ void ChargeController::updateVoltage(){
 	}else{
 		batteryLevel = 0;
 	}
-	Serial.println(String(this->voltage));
+	//Serial.println(String(this->voltage));
 }
 
 int ChargeController::getBatteryLevel(){
