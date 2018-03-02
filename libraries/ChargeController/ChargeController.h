@@ -9,18 +9,18 @@
 #define ChargeController_h
 
 #include "Arduino.h"
-#include "BatteryStatus.h"
 
 class ChargeController {
 	private:
 		int relayCtrlPin;
 		int batteryInputPin;
 		bool isCharging = false;
-		const float battMaxVoltage = 11.25;
-		const float battMinVoltage = 10.00;
+		const float nominalVoltage = 11.50;
+		const float minVoltage = 10.00;
 		int chargeCounter = 0;
 		const int chargeCounterMax = 20;
 		float voltage = 0.00;
+		int batteryLevel = 0;
 
 	void enableCharging(){
 		digitalWrite(this->relayCtrlPin, HIGH);
@@ -32,8 +32,8 @@ class ChargeController {
 	public:
 		ChargeController(int relayCtrlPin, int batteryInputPin);
 		float getVoltage();
-		BatteryStatus getBatteryStatus();
 		void updateVoltage();
+		int getBatteryLevel();
 		void run();
 
 };

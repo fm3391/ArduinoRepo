@@ -7,7 +7,7 @@
 #include <Mosfet.h>
 #include <MD10C.h>
 #include <SimpleTimer.h>
-#include <BatteryStatus.h>
+
 
 /*
   Description: 
@@ -24,58 +24,58 @@ const int ccBattInputPin = A0; // ChargeController Input pin
 const int btMosfetPin = 5; // Mosfet that controls HC-05 module
 const int btStatePin = 6; // Pin that indicate connection status
 
-const int overrideOnPin = 10;
-const int overrideOffPin = 11;
+const int overrideOnPin = 10; // TODO
+const int overrideOffPin = 11; // TODO
 
 
-enum class FireplaceStatus {
-  OFF,
-  RUNNING
+
+enum class SystemMode{
+  LOW_BATT,OVERRIDE,NORMAL
 };
-enum class SystemMode {
-  LOW_BATT,
-  NORMAL,
-  OVERRIDE
-};
+
+bool overrideOnSelected(){
+  boolean isSelected = false;
+  if(digitalRead(overrideOnPin) == HIGH){
+    isSelected = true;
+  }
+  return isSelected;
+}
+
+bool overrideOffSelected(){
+  boolean isSelected = false;
+  if(digitalRead(overrideOffPin) == HIGH){
+    isSelected = true;
+  }
+  return isSelected;
+}
 
 class FireplaceController {
   private:
-    SystemMode mode;
-    FireplaceStatus fireplaceStatus;
+    SystemMode mode = SystemMode::NORMAL;
     MessageManager *messageManager;
     ChargeController *chargeController;
     ValveController valveController;
+    bool isInit = false;
+    int fireplaceState = 0;
 
-    void init() {
-      chargeController->run();
-      mode = SystemMode::NORMAL;
-      messageManager->run();
-      fireplaceStatus = FireplaceStatus::OFF;
-      valveController.closeValve(chargeController->getVoltage()); 
-    }
-
-
-    void handleRequestMessage(SimpleQueue &queueIn){
-      String reqType = queueIn.elementAt(1);
-      if(reqType == "BATT"){
-        
-      }else if(reqType == "FIRE"){
-        
-      }
-    }
-
-    void processMessages() {
+    void processMessages(){
       while(messageManager->availableInboundMsg()){
-        SimpleQueue tmpQueue;
         String msg = messageManager->getInboundMessage();
+        SimpleQueue tmpQueue;
         messageManager->parseMessage(msg, tmpQueue);
-        String msgIdentifier = tmpQueue.elementAt(0);
-        if(msgIdentifier == "REQ"){
-          handleRequestMessage(tmpQueue);
-        }else if(msgIdentifier == "CMD"){
-          if(mode != SystemMode::OVERRIDE){
-            
+        if(tmpQueue.elementAt(0) == "REQ"){
+          String infoMsg = "";
+          if(tmpQueue.elementAt(1) == "BATT"){
+            infoMsg = "INFO:BATT:"+String(chargeController->getBatteryLevel());
+          }else if(tmpQueue.elementAt(1) == "FIRE"){
+            infoMsg = "INFO:FIRE:"+String(fireplaceState);
           }
+          if(infoMsg != ""){
+            messageManager->addOutboundMsg(infoMsg);
+          }
+        }else if(tmpQueue.elementAt(0) == "CMD"){
+          
+
         }
       }
     }
@@ -107,21 +107,17 @@ class FireplaceController {
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
       this->messageManager = &messageManagerIn;
       this->chargeController = &chargeControllerIn;
-      init();
+      
     }
 
     void run() {
-      switch (mode) {
-        case SystemMode::OVERRIDE:
-          handleOverrideMode();
-          break;
-        case SystemMode::NORMAL:
-          handleNormalMode();
-          break;
-        case SystemMode::LOW_BATT:
-          handleLowBattMode();
-          break;
+      if(!isInit){
+        if(chargeController->getBatteryLevel() == 0){
+          mode = SystemMode::LOW_BATT;
+        }
+        isInit = true;
       }
+      processMessages();
     }
 };
 
@@ -144,7 +140,7 @@ void runChargeController() {
 }
 
 void setup() {
-  Serial.begin(38400);
+  Serial.begin(9600);
   pinMode(ccRelayPin, OUTPUT);
   pinMode(vcMosfetPin, OUTPUT);
   pinMode(vcDirPin, OUTPUT);
@@ -154,7 +150,7 @@ void setup() {
 
   timer.setInterval(500, runMessageManager);
   timer.setInterval(1000, runFireplaceController);
-  timer.setInterval(30000, runChargeController);
+  timer.setInterval(5000, runChargeController);
 }
 
 void loop() {
