@@ -15,7 +15,8 @@ class MessageManager {
   private:
 	SimpleQueue inboundMsgQueue;
 	SimpleQueue outboundMsgQueue;
-
+	const char EOM = '$';
+	const String EMPTY = "";
   public:
 	MessageManager();
 	void addOutboundMsg(String msg);

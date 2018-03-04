@@ -38,7 +38,7 @@ void MessageManager::parseMessage(String msg, SimpleQueue &queue){
         }
         else if (msg.charAt(i) == ':') {
           queue.push(identifier);
-          identifier = "";
+          identifier = EMPTY;
         } else {
           identifier = identifier + msg.charAt(i);
         }
@@ -57,22 +57,20 @@ void MessageManager::run() {
 	
   if(!outboundMsgQueue.empty()){
 	String outboundMsg = outboundMsgQueue.pop();
-	outboundMsg = outboundMsg + "$";
+	outboundMsg = outboundMsg + EOM;
 	Serial.println(outboundMsg);
   }
 	
   if (Serial.available() > 0) {
-	  String msg = "";
+	  String msg = EMPTY;
 	  while(Serial.available() > 0){
 		 char nextChar = Serial.read();
-		 if(nextChar == '$'){
+		 if(nextChar == EOM){
 			inboundMsgQueue.push(msg); 
-			msg = "";
+			msg = EMPTY;
 		 }else{
 			 msg.concat(nextChar);
 		 }	
 	  }
   }
-	
-  
 }

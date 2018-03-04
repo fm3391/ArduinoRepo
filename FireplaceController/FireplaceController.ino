@@ -106,9 +106,12 @@ class FireplaceController {
         chargeController->run();
         messageManager->run();
         stopFireplace();
-        
-        
-        
+        //if(isConnected){
+        if(true){  
+          handleReqMsg(MessageSpecifier::BATT);
+          delay(250);
+          handleReqMsg(MessageSpecifier::FIRE);
+        }
         isInit = true;
       }
     }

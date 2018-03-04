@@ -1,21 +1,23 @@
 /*
-  Thermostat.h - Library for flashing Morse code.
-  Created by David A. Mellis, November 2, 2007.
-  Released into the public domain.
+  Enums.h - 
 */
 #ifndef Enums_h
 #define Enums_h
 
 enum class ThermostatMode {
-  OFF, HEAT, COOL
+  OFF = 0, HEAT = 1, COOL = 2
 };
 
 enum class ThermostatFanState {
-  OFF, RUNNING
+  OFF = 0, RUNNING = 1
 };
 
 enum class FireplaceStatus {
-  OFF, RUNNING, UNKNOWN = 99
+  OFF = 0, RUNNING = 1, UNKNOWN = 99
+};
+
+enum class ChargingStatus {
+  NOT_CHARGING = 0, CHARGING = 1, UNKNOWN = 99
 };
 
 enum class BatteryStatus {
@@ -35,7 +37,7 @@ enum class MessageType {
 };
 
 enum class MessageSpecifier {
-  BATT = 0, FIRE = 1, UNKNOWN = 99
+  BATT = 0, FIRE = 1, CHARGE = 2, UNKNOWN = 99
 };
 
 enum class MessageCmd {
