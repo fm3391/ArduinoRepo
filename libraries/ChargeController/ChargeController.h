@@ -9,6 +9,7 @@
 #define ChargeController_h
 
 #include "Arduino.h"
+#include "Enums.h"
 
 class ChargeController {
 	private:
@@ -20,7 +21,6 @@ class ChargeController {
 		int chargeCounter = 0;
 		const int chargeCounterMax = 20;
 		float voltage = 0.00;
-		int batteryLevel = 0;
 
 	void enableCharging(){
 		digitalWrite(this->relayCtrlPin, HIGH);
@@ -33,7 +33,7 @@ class ChargeController {
 		ChargeController(int relayCtrlPin, int batteryInputPin);
 		float getVoltage();
 		void updateVoltage();
-		int getBatteryLevel();
+		BatteryStatus getBatteryStatus();
 		void run();
 
 };

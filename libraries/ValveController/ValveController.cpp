@@ -6,31 +6,23 @@
  */
 #include "Arduino.h"
 #include "ValveController.h"
-#include "ValveControllerStateEnum.h"
+#include "Enums.h"
 
-ValveController::ValveController(int dirPin,int pwmPin,int mosfetPin):md10c(dirPin,pwmPin), mosfet(mosfetPin){	this->state = ValveControllerStateEnum::CLOSED;}
-ValveControllerStateEnum ValveController::getState(){
-	return state;
-}
+ValveController::ValveController(int dirPin,int pwmPin,int mosfetPin):md10c(dirPin,pwmPin), mosfet(mosfetPin){	}
+
 void ValveController::openValve(int battVoltage) { 
-Serial.println("Opening Valve");
 mosfet.setGate(HIGH);
 md10c.setDir(1);
 int pwmVal = (int)((maxVoltageOut/battVoltage) * maxPwmOut);
-Serial.println(String(pwmVal));
 md10c.setPwm((int) pwmVal);
-delay(1000);
+delay(delayTime);
 md10c.setPwm(0);
-mosfet.setGate(LOW);
-this->state = ValveControllerStateEnum::OPEN;}
+mosfet.setGate(LOW);}
 
-void ValveController::closeValve(int battVoltage) {
-Serial.println("Closing Valve");mosfet.setGate(HIGH);
+void ValveController::closeValve(int battVoltage) {mosfet.setGate(HIGH);
 md10c.setDir(0);
 int pwmVal = (int)((maxVoltageOut/battVoltage) * maxPwmOut);
-Serial.println(String(pwmVal));
 md10c.setPwm((int) pwmVal);
-delay(1000);
+delay(delayTime);
 md10c.setPwm(0);
-mosfet.setGate(LOW);
-this->state = ValveControllerStateEnum::CLOSED;}
+mosfet.setGate(LOW);}

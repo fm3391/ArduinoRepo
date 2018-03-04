@@ -45,6 +45,14 @@ void MessageManager::parseMessage(String msg, SimpleQueue &queue){
       }
 }
 
+void MessageManager::clearInboundMsgs(){
+	inboundMsgQueue.clear();
+}
+
+void MessageManager::clearOutboundMsgs(){
+	outboundMsgQueue.clear();
+}
+
 void MessageManager::run() {
 	
   if(!outboundMsgQueue.empty()){

@@ -6,31 +6,33 @@
  */
 #include "Arduino.h"
 #include "ChargeController.h"
+#include "Enums.h"
 
 ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 	this->relayCtrlPin = relayCtrlPin;
 	this->batteryInputPin = batteryInputPin;
 	this->voltage = 0.00;
-	batteryLevel = 0;
 }
 
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
-	voltage = (float)inputVal/(float)1023 * nominalVoltage;
-	if(voltage > 11.00){
-		batteryLevel = 3;
-	}else if(voltage > 10.00){
-		batteryLevel = 2;
-	}else if(voltage > 9.60){
-		batteryLevel = 1;
-	}else{
-		batteryLevel = 0;
-	}
+	this->voltage = (float)inputVal/(float)1023 * nominalVoltage;
 	//Serial.println(String(this->voltage));
 }
 
-int ChargeController::getBatteryLevel(){
-	return batteryLevel;
+BatteryStatus ChargeController::getBatteryStatus(){
+	BatteryStatus status;
+	if(voltage > 11.00){
+		status = BatteryStatus::FULL;
+	}else if(voltage > 10.00){
+		status = BatteryStatus::GOOD;
+	}else if(voltage > 9.60){
+		status = BatteryStatus::WARNING;
+	}else{
+		status = BatteryStatus::LOW_BATT;
+	}
+	
+	return status;
 }
 
 float ChargeController::getVoltage(){

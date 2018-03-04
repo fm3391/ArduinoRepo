@@ -1,4 +1,5 @@
 /* Included Libraries */
+#include <Enums.h>
 #include <MessageManager.h>
 #include <SimpleQueue.h>
 #include <ChargeController.h>
@@ -6,13 +7,12 @@
 #include <Mosfet.h>
 #include <MD10C.h>
 #include <SimpleTimer.h>
-#include <ValveControllerStateEnum.h>
 
 
 /*
   Description:
 
-  References: 
+  References:
   - https://www.baldengineer.com/state-machine-with-enum-tutorial.html
 */
 
@@ -30,29 +30,14 @@ const int btStatePin = 6; // Pin that indicate connection status
 const int overrideOnPin = 10; // TODO
 const int overrideOffPin = 11; // TODO
 
+const String EMPTY = "";
+const String SEPERATOR = ":";
 
-enum RequestType {
-  BATT, FIRE
-};
-enum SystemMode {
-  LOW_BATT, OVERRIDE, NORMAL
-};
+bool isConnected = false;
 
-bool overrideOnSelected() {
-  boolean isSelected = false;
-  if (digitalRead(overrideOnPin) == HIGH) {
-    isSelected = true;
-  }
-  return isSelected;
-}
+/*
 
-bool overrideOffSelected() {
-  boolean isSelected = false;
-  if (digitalRead(overrideOffPin) == HIGH) {
-    isSelected = true;
-  }
-  return isSelected;
-}
+*/
 
 class FireplaceController {
   private:
@@ -60,91 +45,17 @@ class FireplaceController {
     MessageManager *messageManager;
     ChargeController *chargeController;
     ValveController valveController;
+    FireplaceStatus fireplaceStatus;
     bool isInit = false;
 
     void startFireplace() {
-      if (valveController.getState() != ValveControllerStateEnum::OPEN) {
-        valveController.openValve(chargeController->getVoltage());
-      }
+      valveController.openValve(chargeController->getVoltage());
+      fireplaceStatus = FireplaceStatus::RUNNING;
     }
 
     void stopFireplace() {
-      if (valveController.getState() != ValveControllerStateEnum::CLOSED){
-        valveController.closeValve(chargeController->getVoltage());
-      }
-    }
-
-    void sendRequest(RequestType reqType) {
-      String msg = "";
-      switch (reqType) {
-        case RequestType::BATT:
-          msg = "INFO:BATT:" + String(chargeController->getBatteryLevel());
-          break;
-        case RequestType::FIRE:
-         // msg = "INFO:FIRE:" + valveController.getState();
-          break;
-      };
-      if (msg != "") {
-        messageManager->addOutboundMsg(msg);
-      }
-    }
-
-    void processMessages() {
-      
-      while (messageManager->availableInboundMsg()) {
-        String msg = messageManager->getInboundMessage();
-        SimpleQueue tmpQueue;
-        messageManager->parseMessage(msg, tmpQueue);
-        if (tmpQueue.elementAt(0) == "REQ") {
-          String reqElement = tmpQueue.elementAt(1);
-          if (reqElement == "BATT") {
-            sendRequest(RequestType::BATT);
-          } else if (reqElement == "FIRE") {
-            sendRequest(RequestType::FIRE);
-          } else if (reqElement == "ALL") {
-            sendRequest(RequestType::BATT);
-            delay(100);
-            sendRequest(RequestType::FIRE);
-          }
-        } else if (tmpQueue.elementAt(0) == "CMD") {
-          if (mode != SystemMode::OVERRIDE) {
-            if (tmpQueue.elementAt(1) == "FIRE") {
-              String cmdVal = tmpQueue.elementAt(2);
-              if (cmdVal == "ON") {
-
-              } else if (cmdVal == "OFF") {
-
-              }
-
-            }
-          }
-        }
-      }
-    }
-
-    void handleOverrideMode() {
-      /*
-        if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus == FireplaceStatus::OFF) {
-        valveController.openValve(chargeController->getVoltage());
-        fireplaceStatus = FireplaceStatus::RUNNING;
-        } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus == FireplaceStatus::RUNNING) {
-        valveController.closeValve(chargeController->getVoltage());
-        fireplaceStatus = FireplaceStatus::OFF;
-        } else {
-        mode = SystemMode::NORMAL;
-        }
-        // Process inbound messages
-        processMessages();
-      */
-    }
-
-    void handleNormalMode() {
-      // Process inbound messages
-      processMessages();
-    }
-
-    void handleLowBattMode() {
-
+      valveController.closeValve(chargeController->getVoltage());
+      fireplaceStatus = FireplaceStatus::OFF;
     }
 
   public:
@@ -155,16 +66,51 @@ class FireplaceController {
 
     }
 
-    void run() {
+    void handleCmdMsg(MessageSpecifier &msgSpec, MessageCmd msgCmd){
+      if(msgCmd == MessageCmd::FIRE_ON){
+        if(fireplaceStatus != FireplaceStatus::RUNNING){
+          startFireplace();
+        }
+      }else if(msgCmd == MessageCmd::FIRE_OFF){
+        if(fireplaceStatus == FireplaceStatus::RUNNING){
+          stopFireplace();
+        }
+      }
+      handleReqMsg(MessageSpecifier::FIRE);
+    }
+
+    void handleReqMsg(MessageSpecifier msgSpec){
+      String msgOut = EMPTY;
+      String tmpSpecifier = EMPTY;
+      String tmpValue = EMPTY;
+      switch(msgSpec){
+        case MessageSpecifier::BATT:   
+          tmpSpecifier = String((int)MessageSpecifier::BATT);
+          tmpValue = String((int) chargeController->getBatteryStatus());
+        break;
+        case MessageSpecifier::FIRE:
+          tmpSpecifier = String((int)MessageSpecifier::FIRE);
+          tmpValue = String((int) fireplaceStatus);
+        break;
+      }
       
+      if(tmpSpecifier != EMPTY && tmpValue != EMPTY){   
+        msgOut = String((int) MessageType::INFO) + SEPERATOR 
+                 + tmpSpecifier + SEPERATOR + tmpValue;
+        messageManager->addOutboundMsg(msgOut);
+      }
+    }
+
+    void run() {
       if (!isInit) {
         chargeController->run();
-        if (chargeController->getBatteryLevel() == 0) {
-          mode = SystemMode::LOW_BATT;
-        }
+        messageManager->run();
+        stopFireplace();
+        
+        
+        
         isInit = true;
       }
-      processMessages();
     }
 };
 
@@ -173,6 +119,33 @@ SimpleTimer timer;
 MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
 FireplaceController fireplaceController(messageManager, chargeController);
+
+
+void processMessages() {
+  if (true) {
+    //if (isConnected()) {
+    while (messageManager.availableInboundMsg()) {
+      String msg = messageManager.getInboundMessage();
+      SimpleQueue tmpQueue;
+      messageManager.parseMessage(msg, tmpQueue);
+      MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
+      MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
+      
+      switch(msgType){
+        case MessageType::REQ:
+          fireplaceController.handleReqMsg(msgSpec);
+        break;
+        case MessageType::CMD:
+          MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
+          fireplaceController.handleCmdMsg(msgSpec, cmd);
+        break;
+      }
+
+    }
+  } else if (messageManager.availableInboundMsg()) {
+    messageManager.clearInboundMsgs();
+  }
+}
 
 void runFireplaceController() {
   fireplaceController.run();
@@ -186,18 +159,44 @@ void runChargeController() {
   chargeController.run();
 }
 
+void runConnectionUpdate(){
+  int connectionVal = digitalRead(btStatePin); 
+  if(isConnected && connectionVal == LOW){
+    isConnected = false;
+  }else if(!isConnected && connectionVal == HIGH){
+    isConnected = true;
+  }
+}
+
 void setup() {
   Serial.begin(9600);
+
+  // Output pins
   pinMode(ccRelayPin, OUTPUT);
   pinMode(vcMosfetPin, OUTPUT);
   pinMode(vcDirPin, OUTPUT);
   pinMode(vcPwmPin, OUTPUT);
+  pinMode(btMosfetPin, OUTPUT);
+
+  // Input pins
+  pinMode(overrideOnPin, INPUT);
+  pinMode(overrideOffPin, INPUT);
+  pinMode(btStatePin, INPUT);
+
+  // Setting initial pin setting
   digitalWrite(ccRelayPin, LOW);
   digitalWrite(vcMosfetPin, LOW);
+  digitalWrite(btMosfetPin, HIGH);
 
+  // Update Connection Status
+  runConnectionUpdate();
+
+  // Setup Timers
   timer.setInterval(500, runMessageManager);
+  timer.setInterval(500, runConnectionUpdate);
+  timer.setInterval(750, processMessages);
   timer.setInterval(1000, runFireplaceController);
-  timer.setInterval(5000, runChargeController);
+  timer.setInterval(30000, runChargeController);
 }
 
 void loop() {
