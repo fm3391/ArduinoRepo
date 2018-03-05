@@ -39,6 +39,33 @@ bool isConnected = false;
 
 */
 
+// Override Function
+bool isOverrideOn() {
+  boolean isSet = false;
+  if (digitalRead(overrideOnPin) == HIGH) {
+    isSet = true;
+  }
+  return isSet;
+}
+
+bool isOverrideOff() {
+  boolean isSet = false;
+  if (digitalRead(overrideOffPin) == HIGH) {
+    isSet = true;
+  }
+  return isSet;
+}
+
+// Bluetooth Functions
+void connectBT() {
+  digitalWrite(btMosfetPin, HIGH);
+}
+
+void disconnectBT() {
+  digitalWrite(btMosfetPin, LOW);
+}
+
+// Main Class
 class FireplaceController {
   private:
     SystemMode mode = SystemMode::NORMAL;
@@ -66,36 +93,38 @@ class FireplaceController {
 
     }
 
-    void handleCmdMsg(MessageSpecifier &msgSpec, MessageCmd msgCmd){
-      if(msgCmd == MessageCmd::FIRE_ON){
-        if(fireplaceStatus != FireplaceStatus::RUNNING){
-          startFireplace();
+    void handleCmdMsg(MessageSpecifier &msgSpec, MessageCmd msgCmd) {
+      if (mode != SystemMode::OVERRIDE) {
+        if (msgCmd == MessageCmd::FIRE_ON) {
+          if (fireplaceStatus != FireplaceStatus::RUNNING) {
+            startFireplace();
+          }
+        } else if (msgCmd == MessageCmd::FIRE_OFF) {
+          if (fireplaceStatus == FireplaceStatus::RUNNING) {
+            stopFireplace();
+          }
         }
-      }else if(msgCmd == MessageCmd::FIRE_OFF){
-        if(fireplaceStatus == FireplaceStatus::RUNNING){
-          stopFireplace();
-        }
+        handleReqMsg(MessageSpecifier::FIRE);
       }
-      handleReqMsg(MessageSpecifier::FIRE);
     }
 
-    void handleReqMsg(MessageSpecifier msgSpec){
+    void handleReqMsg(MessageSpecifier msgSpec) {
       String msgOut = EMPTY;
       String tmpSpecifier = EMPTY;
       String tmpValue = EMPTY;
-      switch(msgSpec){
-        case MessageSpecifier::BATT:   
+      switch (msgSpec) {
+        case MessageSpecifier::BATT:
           tmpSpecifier = String((int)MessageSpecifier::BATT);
           tmpValue = String((int) chargeController->getBatteryStatus());
-        break;
+          break;
         case MessageSpecifier::FIRE:
           tmpSpecifier = String((int)MessageSpecifier::FIRE);
           tmpValue = String((int) fireplaceStatus);
-        break;
+          break;
       }
-      
-      if(tmpSpecifier != EMPTY && tmpValue != EMPTY){   
-        msgOut = String((int) MessageType::INFO) + SEPERATOR 
+
+      if (tmpSpecifier != EMPTY && tmpValue != EMPTY) {
+        msgOut = String((int) MessageType::INFO) + SEPERATOR
                  + tmpSpecifier + SEPERATOR + tmpValue;
         messageManager->addOutboundMsg(msgOut);
       }
@@ -103,16 +132,37 @@ class FireplaceController {
 
     void run() {
       if (!isInit) {
+        connectBT();
         chargeController->run();
         messageManager->run();
         stopFireplace();
-        //if(isConnected){
-        if(true){  
+        //if (isConnected) {
+        if (true) {
           handleReqMsg(MessageSpecifier::BATT);
-          delay(250);
+          delay(500);
           handleReqMsg(MessageSpecifier::FIRE);
         }
         isInit = true;
+      }
+
+      if (mode == SystemMode::NORMAL) {
+        if (isOverrideOn() || isOverrideOff()) {
+          mode = SystemMode::OVERRIDE;
+        } else {
+          // TODO
+        }
+      }
+
+      if (mode == SystemMode::OVERRIDE) {
+        if (isOverrideOn() || isOverrideOff()) {
+          if (isOverrideOn() && fireplaceStatus != FireplaceStatus::RUNNING) {
+            startFireplace();
+          } else if (isOverrideOff() && fireplaceStatus != FireplaceStatus::OFF) {
+            stopFireplace();
+          }
+        }else{
+          mode = SystemMode::NORMAL;
+        }
       }
     }
 };
@@ -126,22 +176,23 @@ FireplaceController fireplaceController(messageManager, chargeController);
 
 void processMessages() {
   if (true) {
-    //if (isConnected()) {
+    //  if (isConnected) {
     while (messageManager.availableInboundMsg()) {
+
       String msg = messageManager.getInboundMessage();
       SimpleQueue tmpQueue;
       messageManager.parseMessage(msg, tmpQueue);
       MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
       MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
-      
-      switch(msgType){
+
+      switch (msgType) {
         case MessageType::REQ:
           fireplaceController.handleReqMsg(msgSpec);
-        break;
+          break;
         case MessageType::CMD:
           MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
           fireplaceController.handleCmdMsg(msgSpec, cmd);
-        break;
+          break;
       }
 
     }
@@ -162,11 +213,11 @@ void runChargeController() {
   chargeController.run();
 }
 
-void runConnectionUpdate(){
-  int connectionVal = digitalRead(btStatePin); 
-  if(isConnected && connectionVal == LOW){
+void runConnectionUpdate() {
+  int connectionVal = digitalRead(btStatePin);
+  if (isConnected && connectionVal == LOW) {
     isConnected = false;
-  }else if(!isConnected && connectionVal == HIGH){
+  } else if (!isConnected && connectionVal == HIGH) {
     isConnected = true;
   }
 }
@@ -189,7 +240,6 @@ void setup() {
   // Setting initial pin setting
   digitalWrite(ccRelayPin, LOW);
   digitalWrite(vcMosfetPin, LOW);
-  digitalWrite(btMosfetPin, HIGH);
 
   // Update Connection Status
   runConnectionUpdate();

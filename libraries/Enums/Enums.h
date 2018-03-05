@@ -36,12 +36,6 @@ enum class BatteryStatus {
 /*
 
 */
-enum class FireplaceState {
-  OFF = 0, RUNNING = 1
-};
-/*
-
-*/
 enum class SystemMode {
   LOW_BATT = 0, OVERRIDE = 1, NORMAL = 2
 };
