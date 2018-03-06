@@ -145,6 +145,20 @@ class FireplaceController {
         isInit = true;
       }
 
+      if(mode == SystemMode::LOW_BATT) {
+        if(chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT){
+          if(fireplaceStatus == FireplaceStatus::RUNNING){
+            stopFireplace();
+          }
+          if(isConnected){
+            disconnectBT();
+          }
+        }else if(chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT){
+          connectBT();
+          mode = SystemMode::NORMAL;
+        }
+      }
+
       if (mode == SystemMode::NORMAL) {
         if (isOverrideOn() || isOverrideOff()) {
           mode = SystemMode::OVERRIDE;
