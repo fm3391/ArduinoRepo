@@ -17,7 +17,7 @@ class ValveController {
 private:
   const float maxVoltageOut = 6.0;
   const float maxPwmOut = 254.0;
-  const int delayTime = 1500;
+  const int delayTime = 750;
   MD10C md10c;
   Mosfet mosfet;
   void cycle();

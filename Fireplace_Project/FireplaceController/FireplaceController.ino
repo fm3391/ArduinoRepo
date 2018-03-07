@@ -33,37 +33,30 @@ const int overrideOffPin = 11; // TODO
 const String EMPTY = "";
 const String SEPERATOR = ":";
 
+BluetoothState btState;
 bool isConnected = false;
+bool lowBatt = false;
 
 /*
 
 */
 
-// Override Function
-bool isOverrideOn() {
-  boolean isSet = false;
-  if (digitalRead(overrideOnPin) == HIGH) {
-    isSet = true;
+void setBluetoothState(BluetoothState newState) {
+  if (newState != btState) {
+    switch (newState) {
+      case BluetoothState::ENABLED:
+        digitalWrite(btMosfetPin, HIGH);
+        btState = BluetoothState::ENABLED;
+        break;
+      case BluetoothState::DISABLED:
+        digitalWrite(btMosfetPin, LOW);
+        btState = BluetoothState::DISABLED;
+        break;
+    }
   }
-  return isSet;
 }
 
-bool isOverrideOff() {
-  boolean isSet = false;
-  if (digitalRead(overrideOffPin) == HIGH) {
-    isSet = true;
-  }
-  return isSet;
-}
 
-// Bluetooth Functions
-void connectBT() {
-  digitalWrite(btMosfetPin, HIGH);
-}
-
-void disconnectBT() {
-  digitalWrite(btMosfetPin, LOW);
-}
 
 // Main Class
 class FireplaceController {
@@ -74,6 +67,7 @@ class FireplaceController {
     ValveController valveController;
     FireplaceStatus fireplaceStatus;
     bool isInit = false;
+
 
     void startFireplace() {
       valveController.openValve(chargeController->getVoltage());
@@ -96,7 +90,7 @@ class FireplaceController {
     void handleCmdMsg(MessageSpecifier &msgSpec, MessageCmd msgCmd) {
       if (mode != SystemMode::OVERRIDE) {
         if (msgCmd == MessageCmd::FIRE_ON) {
-          if (fireplaceStatus != FireplaceStatus::RUNNING) {
+          if (fireplaceStatus != FireplaceStatus::RUNNING && !lowBatt) {
             startFireplace();
           }
         } else if (msgCmd == MessageCmd::FIRE_OFF) {
@@ -132,7 +126,6 @@ class FireplaceController {
 
     void run() {
       if (!isInit) {
-        connectBT();
         chargeController->run();
         messageManager->run();
         stopFireplace();
@@ -145,36 +138,27 @@ class FireplaceController {
         isInit = true;
       }
 
-      if(mode == SystemMode::LOW_BATT) {
-        if(chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT){
-          if(fireplaceStatus == FireplaceStatus::RUNNING){
-            stopFireplace();
-          }
-          if(isConnected){
-            disconnectBT();
-          }
-        }else if(chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT){
-          connectBT();
-          mode = SystemMode::NORMAL;
-        }
+      // Manage Bluetooth power based on battery status
+      if(chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT && btState == BluetoothState::ENABLED){
+        setBluetoothState(BluetoothState::DISABLED);
+      }else if(chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT && btState == BluetoothState::DISABLED){
+        setBluetoothState(BluetoothState::ENABLED);
       }
 
       if (mode == SystemMode::NORMAL) {
-        if (isOverrideOn() || isOverrideOff()) {
+        if (digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH) {
           mode = SystemMode::OVERRIDE;
         } else {
-          // TODO
+          
         }
       }
 
       if (mode == SystemMode::OVERRIDE) {
-        if (isOverrideOn() || isOverrideOff()) {
-          if (isOverrideOn() && fireplaceStatus != FireplaceStatus::RUNNING) {
-            startFireplace();
-          } else if (isOverrideOff() && fireplaceStatus != FireplaceStatus::OFF) {
-            stopFireplace();
-          }
-        }else{
+        if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus != FireplaceStatus::RUNNING) {
+          startFireplace();
+        } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus != FireplaceStatus::OFF) {
+          stopFireplace();
+        } else {
           mode = SystemMode::NORMAL;
         }
       }
@@ -192,7 +176,6 @@ void processMessages() {
   if (true) {
     //  if (isConnected) {
     while (messageManager.availableInboundMsg()) {
-
       String msg = messageManager.getInboundMessage();
       SimpleQueue tmpQueue;
       messageManager.parseMessage(msg, tmpQueue);

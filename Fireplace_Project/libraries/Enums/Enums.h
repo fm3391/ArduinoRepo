@@ -36,8 +36,14 @@ enum class BatteryStatus {
 /*
 
 */
+enum class BluetoothState {
+  DISABLED = 0, ENABLED = 1
+};
+/*
+
+*/
 enum class SystemMode {
-  LOW_BATT = 0, OVERRIDE = 1, NORMAL = 2
+  OVERRIDE = 0, NORMAL = 1
 };
 /*
 
