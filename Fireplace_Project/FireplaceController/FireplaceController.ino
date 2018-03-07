@@ -27,8 +27,8 @@ const int ccBattInputPin = A0; // ChargeController Input pin
 const int btMosfetPin = 5; // Mosfet that controls HC-05 module
 const int btStatePin = 6; // Pin that indicate connection status
 
-const int overrideOnPin = 10; // TODO
-const int overrideOffPin = 11; // TODO
+const int overrideOnPin = 11; // TODO
+const int overrideOffPin = 10; // TODO
 
 const String EMPTY = "";
 const String SEPERATOR = ":";
@@ -72,11 +72,13 @@ class FireplaceController {
     void startFireplace() {
       valveController.openValve(chargeController->getVoltage());
       fireplaceStatus = FireplaceStatus::RUNNING;
+      Serial.println("FIRE ON");
     }
 
     void stopFireplace() {
       valveController.closeValve(chargeController->getVoltage());
       fireplaceStatus = FireplaceStatus::OFF;
+      Serial.println("FIRE OFF");
     }
 
   public:
