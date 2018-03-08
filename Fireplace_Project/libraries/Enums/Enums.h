@@ -7,13 +7,7 @@
 
 */
 enum class ThermostatMode {
-  OFF = 0, HEAT = 1, COOL = 2
-};
-/*
-
-*/
-enum class ThermostatFanState {
-  OFF = 0, RUNNING = 1
+  OFF = 0, HEATING = 1, COOLING = 2
 };
 /*
 
@@ -49,7 +43,7 @@ enum class SystemMode {
 
 */
 enum class MessageType {
-  REQ = 0, CMD =1 , INFO = 2, UNKNOWN = 99
+  REQ = 0, CMD =1 , INFO = 2,UNKNOWN = 99
 };
 /*
 

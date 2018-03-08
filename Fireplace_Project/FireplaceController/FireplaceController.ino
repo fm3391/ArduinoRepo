@@ -8,12 +8,10 @@
 #include <MD10C.h>
 #include <SimpleTimer.h>
 
-
 /*
   Description:
-
-  References:
-  - https://www.baldengineer.com/state-machine-with-enum-tutorial.html
+  
+  
 */
 
 // Pin Declarations
@@ -40,7 +38,6 @@ bool lowBatt = false;
 /*
 
 */
-
 void setBluetoothState(BluetoothState newState) {
   if (newState != btState) {
     switch (newState) {
@@ -56,8 +53,6 @@ void setBluetoothState(BluetoothState newState) {
   }
 }
 
-
-
 // Main Class
 class FireplaceController {
   private:
@@ -69,68 +64,79 @@ class FireplaceController {
     bool isInit = false;
 
 
-    void startFireplace() {
-      valveController.openValve(chargeController->getVoltage());
-      fireplaceStatus = FireplaceStatus::RUNNING;
-      Serial.println("FIRE ON");
+    /*
+     * 
+     */
+    void setFireplaceState(FireplaceStatus newFireplaceStatus) {
+      if (fireplaceStatus != newFireplaceStatus) {
+        switch (newFireplaceStatus) {
+          case FireplaceStatus::RUNNING:
+            valveController.openValve(chargeController->getVoltage());
+            fireplaceStatus = FireplaceStatus::RUNNING;
+            break;
+          case FireplaceStatus::OFF:
+            valveController.closeValve(chargeController->getVoltage());
+            fireplaceStatus = FireplaceStatus::OFF;
+            break;
+        }
+        handleReqMsg(MessageSpecifier::FIRE);
+      }
     }
 
-    void stopFireplace() {
-      valveController.closeValve(chargeController->getVoltage());
-      fireplaceStatus = FireplaceStatus::OFF;
-      Serial.println("FIRE OFF");
-    }
 
   public:
-    FireplaceController(MessageManager &messageManagerIn, ChargeController &chargeControllerIn)
+    FireplaceController(MessageManager & messageManagerIn, ChargeController & chargeControllerIn)
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
       this->messageManager = &messageManagerIn;
       this->chargeController = &chargeControllerIn;
 
     }
 
-    void handleCmdMsg(MessageSpecifier &msgSpec, MessageCmd msgCmd) {
+    /*
+     * 
+     */
+    void handleCmdMsg(MessageSpecifier & msgSpec, MessageCmd msgCmd) {
       if (mode != SystemMode::OVERRIDE) {
         if (msgCmd == MessageCmd::FIRE_ON) {
           if (fireplaceStatus != FireplaceStatus::RUNNING && !lowBatt) {
-            startFireplace();
+            setFireplaceState(FireplaceStatus::RUNNING);
           }
         } else if (msgCmd == MessageCmd::FIRE_OFF) {
           if (fireplaceStatus == FireplaceStatus::RUNNING) {
-            stopFireplace();
+            setFireplaceState(FireplaceStatus::OFF);
           }
         }
-        handleReqMsg(MessageSpecifier::FIRE);
+        
       }
     }
 
+    /*
+     * 
+     */
     void handleReqMsg(MessageSpecifier msgSpec) {
-      String msgOut = EMPTY;
-      String tmpSpecifier = EMPTY;
-      String tmpValue = EMPTY;
+      String msgOut = "";
       switch (msgSpec) {
         case MessageSpecifier::BATT:
-          tmpSpecifier = String((int)MessageSpecifier::BATT);
-          tmpValue = String((int) chargeController->getBatteryStatus());
+          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::BATT)
+                + SEPERATOR + String((int) chargeController->getBatteryStatus());
+          messageManager->addOutboundMsg(msgOut);
           break;
         case MessageSpecifier::FIRE:
-          tmpSpecifier = String((int)MessageSpecifier::FIRE);
-          tmpValue = String((int) fireplaceStatus);
+          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::FIRE) 
+                + SEPERATOR + String((int) fireplaceStatus);
+          messageManager->addOutboundMsg(msgOut);
           break;
-      }
-
-      if (tmpSpecifier != EMPTY && tmpValue != EMPTY) {
-        msgOut = String((int) MessageType::INFO) + SEPERATOR
-                 + tmpSpecifier + SEPERATOR + tmpValue;
-        messageManager->addOutboundMsg(msgOut);
       }
     }
 
+    /*
+     * 
+     */
     void run() {
       if (!isInit) {
         chargeController->run();
         messageManager->run();
-        stopFireplace();
+        setFireplaceState(FireplaceStatus::OFF);
         //if (isConnected) {
         if (true) {
           handleReqMsg(MessageSpecifier::BATT);
@@ -140,26 +146,31 @@ class FireplaceController {
         isInit = true;
       }
 
-      // Manage Bluetooth power based on battery status
-      if(chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT && btState == BluetoothState::ENABLED){
+      /*
+       * 
+       */
+      if (chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT && btState == BluetoothState::ENABLED) {
         setBluetoothState(BluetoothState::DISABLED);
-      }else if(chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT && btState == BluetoothState::DISABLED){
+      } else if (chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT && btState == BluetoothState::DISABLED) {
         setBluetoothState(BluetoothState::ENABLED);
       }
 
-      if (mode == SystemMode::NORMAL) {
-        if (digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH) {
-          mode = SystemMode::OVERRIDE;
-        } else {
-          
-        }
+      /*
+       * 
+       */
+      if (mode == SystemMode::NORMAL &&
+          (digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH)) {
+        mode = SystemMode::OVERRIDE;
       }
 
+      /*
+       * 
+       */
       if (mode == SystemMode::OVERRIDE) {
         if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus != FireplaceStatus::RUNNING) {
-          startFireplace();
+          setFireplaceState(FireplaceStatus::RUNNING);
         } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus != FireplaceStatus::OFF) {
-          stopFireplace();
+          setFireplaceState(FireplaceStatus::OFF);
         } else {
           mode = SystemMode::NORMAL;
         }
@@ -173,7 +184,9 @@ MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
 FireplaceController fireplaceController(messageManager, chargeController);
 
-
+/*
+ * 
+ */
 void processMessages() {
   if (true) {
     //  if (isConnected) {
@@ -200,18 +213,27 @@ void processMessages() {
   }
 }
 
+/*
+ * 
+ */
 void runFireplaceController() {
   fireplaceController.run();
 }
-
+/*
+ * 
+ */
 void runMessageManager() {
   messageManager.run();
 }
-
+/*
+ * 
+ */
 void runChargeController() {
   chargeController.run();
 }
-
+/*
+ * 
+ */
 void runConnectionUpdate() {
   int connectionVal = digitalRead(btStatePin);
   if (isConnected && connectionVal == LOW) {
