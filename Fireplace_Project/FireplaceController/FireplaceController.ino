@@ -199,7 +199,7 @@ void processMessages() {
 
       switch (msgType) {
         case MessageType::REQ:
-          if (msgSpec == MessageSpecifier::FIRE || msgSpec == MessageSpecifier::FIRE) {
+          if (msgSpec == MessageSpecifier::BATT || msgSpec == MessageSpecifier::FIRE) {
             fireplaceController.handleReqMsg(msgSpec);
           }
           break;
