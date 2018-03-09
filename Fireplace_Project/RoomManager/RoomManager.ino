@@ -177,7 +177,7 @@ void checkBluetoothConnection() {
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   checkBluetoothConnection();
   attachInterrupt(digitalPinToInterrupt(occupancyInputPin), activityDetected, RISING);
   timer.setInterval(1000, runOccupancyMonitor);

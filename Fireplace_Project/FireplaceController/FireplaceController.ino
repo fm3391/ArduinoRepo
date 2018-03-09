@@ -10,8 +10,8 @@
 
 /*
   Description:
-  
-  
+
+
 */
 
 // Pin Declarations
@@ -65,8 +65,8 @@ class FireplaceController {
 
 
     /*
-     * 
-     */
+
+    */
     void setFireplaceState(FireplaceStatus newFireplaceStatus) {
       if (fireplaceStatus != newFireplaceStatus) {
         switch (newFireplaceStatus) {
@@ -93,8 +93,8 @@ class FireplaceController {
     }
 
     /*
-     * 
-     */
+
+    */
     void handleCmdMsg(MessageSpecifier & msgSpec, MessageCmd msgCmd) {
       if (mode != SystemMode::OVERRIDE) {
         if (msgCmd == MessageCmd::FIRE_ON) {
@@ -106,32 +106,32 @@ class FireplaceController {
             setFireplaceState(FireplaceStatus::OFF);
           }
         }
-        
+
       }
     }
 
     /*
-     * 
-     */
+
+    */
     void handleReqMsg(MessageSpecifier msgSpec) {
       String msgOut = "";
       switch (msgSpec) {
         case MessageSpecifier::BATT:
           msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::BATT)
-                + SEPERATOR + String((int) chargeController->getBatteryStatus());
+                   + SEPERATOR + String((int) chargeController->getBatteryStatus());
           messageManager->addOutboundMsg(msgOut);
           break;
         case MessageSpecifier::FIRE:
-          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::FIRE) 
-                + SEPERATOR + String((int) fireplaceStatus);
+          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::FIRE)
+                   + SEPERATOR + String((int) fireplaceStatus);
           messageManager->addOutboundMsg(msgOut);
           break;
       }
     }
 
     /*
-     * 
-     */
+
+    */
     void run() {
       if (!isInit) {
         chargeController->run();
@@ -147,8 +147,8 @@ class FireplaceController {
       }
 
       /*
-       * 
-       */
+
+      */
       if (chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT && btState == BluetoothState::ENABLED) {
         setBluetoothState(BluetoothState::DISABLED);
       } else if (chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT && btState == BluetoothState::DISABLED) {
@@ -156,16 +156,16 @@ class FireplaceController {
       }
 
       /*
-       * 
-       */
+
+      */
       if (mode == SystemMode::NORMAL &&
           (digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH)) {
         mode = SystemMode::OVERRIDE;
       }
 
       /*
-       * 
-       */
+
+      */
       if (mode == SystemMode::OVERRIDE) {
         if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus != FireplaceStatus::RUNNING) {
           setFireplaceState(FireplaceStatus::RUNNING);
@@ -185,8 +185,8 @@ ChargeController chargeController(ccRelayPin, ccBattInputPin);
 FireplaceController fireplaceController(messageManager, chargeController);
 
 /*
- * 
- */
+
+*/
 void processMessages() {
   if (true) {
     //  if (isConnected) {
@@ -199,11 +199,15 @@ void processMessages() {
 
       switch (msgType) {
         case MessageType::REQ:
-          fireplaceController.handleReqMsg(msgSpec);
+          if (msgSpec == MessageSpecifier::FIRE || msgSpec == MessageSpecifier::FIRE) {
+            fireplaceController.handleReqMsg(msgSpec);
+          }
           break;
         case MessageType::CMD:
-          MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
-          fireplaceController.handleCmdMsg(msgSpec, cmd);
+          if (msgSpec == MessageSpecifier::FIRE) {
+            MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
+            fireplaceController.handleCmdMsg(msgSpec, cmd);
+          }
           break;
       }
 
@@ -214,26 +218,26 @@ void processMessages() {
 }
 
 /*
- * 
- */
+
+*/
 void runFireplaceController() {
   fireplaceController.run();
 }
 /*
- * 
- */
+
+*/
 void runMessageManager() {
   messageManager.run();
 }
 /*
- * 
- */
+
+*/
 void runChargeController() {
   chargeController.run();
 }
 /*
- * 
- */
+
+*/
 void runConnectionUpdate() {
   int connectionVal = digitalRead(btStatePin);
   if (isConnected && connectionVal == LOW) {
@@ -244,7 +248,7 @@ void runConnectionUpdate() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
 
   // Output pins
   pinMode(ccRelayPin, OUTPUT);
@@ -263,7 +267,9 @@ void setup() {
   digitalWrite(vcMosfetPin, LOW);
 
   // Update Connection Status
+  setBluetoothState(BluetoothState::ENABLED );
   runConnectionUpdate();
+
 
   // Setup Timers
   timer.setInterval(500, runMessageManager);
