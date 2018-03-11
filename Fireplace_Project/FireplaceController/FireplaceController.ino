@@ -31,9 +31,15 @@ const int overrideOffPin = 10; // TODO
 const String EMPTY = "";
 const String SEPERATOR = ":";
 
+const long timeOutMax = (long) 600000;
+
 BluetoothState btState;
 bool isConnected = false;
 bool lowBatt = false;
+
+SimpleTimer timer;
+int timeOutTimerId;
+
 
 /*
 
@@ -73,10 +79,12 @@ class FireplaceController {
           case FireplaceStatus::RUNNING:
             valveController.openValve(chargeController->getVoltage());
             fireplaceStatus = FireplaceStatus::RUNNING;
+            timeOutTimerId = timer.setTimeout(timeOutMax, runTimeout);
             break;
           case FireplaceStatus::OFF:
             valveController.closeValve(chargeController->getVoltage());
             fireplaceStatus = FireplaceStatus::OFF;
+            timer.deleteTimer(timeOutTimerId);
             break;
         }
         handleReqMsg(MessageSpecifier::FIRE);
@@ -89,13 +97,20 @@ class FireplaceController {
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
       this->messageManager = &messageManagerIn;
       this->chargeController = &chargeControllerIn;
+    }
 
+    SystemMode getMode(){
+      return mode;
+    }
+
+    FireplaceStatus getFireplaceStatus(){
+      return fireplaceStatus;
     }
 
     /*
 
     */
-    void handleCmdMsg(MessageSpecifier & msgSpec, MessageCmd msgCmd) {
+    void handleCmdMsg(MessageSpecifier msgSpec, MessageCmd msgCmd) {
       if (mode != SystemMode::OVERRIDE) {
         if (msgCmd == MessageCmd::FIRE_ON) {
           if (fireplaceStatus != FireplaceStatus::RUNNING && !lowBatt) {
@@ -179,10 +194,16 @@ class FireplaceController {
 };
 
 // Object Instantiations
-SimpleTimer timer;
 MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
 FireplaceController fireplaceController(messageManager, chargeController);
+
+
+void runTimeout(){
+  if(fireplaceController.getFireplaceStatus() == FireplaceStatus::RUNNING && fireplaceController.getMode() == SystemMode::NORMAL){
+    fireplaceController.handleCmdMsg(MessageSpecifier::FIRE, MessageCmd::FIRE_OFF);
+  }
+}
 
 /*
 
