@@ -99,11 +99,11 @@ class FireplaceController {
       this->chargeController = &chargeControllerIn;
     }
 
-    SystemMode getMode(){
+    SystemMode getMode() {
       return mode;
     }
 
-    FireplaceStatus getFireplaceStatus(){
+    FireplaceStatus getFireplaceStatus() {
       return fireplaceStatus;
     }
 
@@ -173,10 +173,15 @@ class FireplaceController {
       /*
 
       */
-      if (mode == SystemMode::NORMAL &&
-          (digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH)) {
-        mode = SystemMode::OVERRIDE;
+
+      if (mode == SystemMode::NORMAL) {
+        if ((digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH)) {
+          mode = SystemMode::OVERRIDE;
+        } else if (fireplaceStatus == FireplaceStatus::RUNNING && !isConnected) {
+          setFireplaceState(FireplaceStatus::OFF);
+        }
       }
+
 
       /*
 
@@ -199,8 +204,8 @@ ChargeController chargeController(ccRelayPin, ccBattInputPin);
 FireplaceController fireplaceController(messageManager, chargeController);
 
 
-void runTimeout(){
-  if(fireplaceController.getFireplaceStatus() == FireplaceStatus::RUNNING && fireplaceController.getMode() == SystemMode::NORMAL){
+void runTimeout() {
+  if (fireplaceController.getFireplaceStatus() == FireplaceStatus::RUNNING && fireplaceController.getMode() == SystemMode::NORMAL) {
     fireplaceController.handleCmdMsg(MessageSpecifier::FIRE, MessageCmd::FIRE_OFF);
   }
 }
@@ -209,8 +214,7 @@ void runTimeout(){
 
 */
 void processMessages() {
-  if (true) {
-    //  if (isConnected) {
+  if (isConnected) {
     while (messageManager.availableInboundMsg()) {
       String msg = messageManager.getInboundMessage();
       SimpleQueue tmpQueue;
