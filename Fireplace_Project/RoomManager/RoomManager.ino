@@ -5,16 +5,17 @@
 #include <Thermostat.h>
 
 // Constants
-const int fanRelayPin = 0;
-const int occupancyInputPin = 0;
-const int btStatePin = 0;
-const int thermostatHeatPin = 0;
-const int thermostatCoolPin = 0;
+const int heartBtLedPin = 12;
+const int fanRelayPin = 11;
+const int occupancyInputPin = 2;
+const int btStatePin = 10;
+const int thermostatHeatPin = 9;
+const int thermostatCoolPin = 8;
 const String MSG_SEPERATOR = ":";
 
 // Message used to request the current battery status from the FireplaceController
 const String reqBatteryMsg =  String((int) MessageType::REQ) + MSG_SEPERATOR +
-                             String((int) MessageSpecifier::BATT);
+                              String((int) MessageSpecifier::BATT);
 //
 const String reqFireMsg =  String((int) MessageType::REQ) + MSG_SEPERATOR +
                            String((int) MessageSpecifier::FIRE);
@@ -29,43 +30,13 @@ const String cmdFireOffMsg =  String((int) MessageType::CMD) + MSG_SEPERATOR +
 
 // Bluetooth Connection State variable
 bool isConnected = false;
-bool isCharging = false;
-
-
-class Fan {
-  private:
-    bool isRunning;
-    int relayPin;
-  public:
-    Fan(int pin) {
-      this->relayPin = pin;
-    }
-
-    void start() {
-      if (!isRunning) {
-        digitalWrite(relayPin, HIGH);
-        isRunning = !isRunning;
-      }
-    }
-
-    void stop() {
-      if (isRunning) {
-        digitalWrite(relayPin, LOW);
-        isRunning = !isRunning;
-      }
-    }
-
-};
-
-
-
-
 
 // Object Instantiations
 SimpleTimer timer;
+SimpleTimer timeOutTimer;
 OccupancyMonitor occupancyMonitor;
 MessageManager messageManager;
-Thermostat thermostat(0, 0);
+Thermostat thermostat(thermostatHeatPin, thermostatCoolPin);
 
 /*
   Main Class for managing the FireplaceController and Fan
@@ -73,76 +44,58 @@ Thermostat thermostat(0, 0);
 class RoomManager {
   private:
     bool isInit = false;
-    OccupancyMonitor *occupancyMonitor;
-    Thermostat *thermostat;
-    MessageManager *messageManager;
-    Fan fan;
 
-    FireplaceStatus fireplaceStatus = FireplaceStatus::UNKNOWN;
-    BatteryStatus batteryStatus = BatteryStatus::UNKNOWN;
 
   public:
-    RoomManager(Thermostat &thermostatIn, MessageManager &messageManagerIn,
-                OccupancyMonitor &occupancyMonitor, const int &fanRelayPinIn): fan(fanRelayPinIn) {
-      this->messageManager = &messageManagerIn;
-      this->thermostat = &thermostatIn;
-      this->occupancyMonitor = &occupancyMonitor;
+    RoomManager() {
+
     }
 
-    void handleBatteryStatusUpdate(BatteryStatus newStatus) {
-      if(newStatus != batteryStatus){
-        batteryStatus = newStatus;
-      }
-    }
-
-    void handleFireplaceStatusUpdate(FireplaceStatus newStatus) {
-      if(newStatus != fireplaceStatus){
-        fireplaceStatus = newStatus;
-      }
-    }
     void run() {
       if (!isInit) {
-        thermostat->run();
-        messageManager->run();
-        occupancyMonitor->run();
-        if (isConnected) {
-          messageManager->addOutboundMsg(reqBatteryMsg);
-          messageManager->addOutboundMsg(reqFireMsg);
-        }
+
         isInit = true;
       }
 
-      if(occupancyMonitor->roomOccupied){
-        
-      }else{
-        
-      }
+
       
     }
-
 };
 
 // RoomManager Instantiation
-RoomManager roomManager(thermostat, messageManager, occupancyMonitor, fanRelayPin);
+
+
+
+
+
 
 /*
- * Processes messages from the FireplaceController
- */
+   Processes messages from the FireplaceController
+*/
 void processInboundMsgs() {
   while (messageManager.availableInboundMsg()) {
     String msg = messageManager.getInboundMessage();
     SimpleQueue tmpQueue;
     messageManager.parseMessage(msg, tmpQueue);
-
-    MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
-    if(msgSpec == MessageSpecifier::BATT){
-      roomManager.handleBatteryStatusUpdate((BatteryStatus) (tmpQueue.elementAt(2)).toInt());
-    }else if(msgSpec == MessageSpecifier::FIRE){
-      roomManager.handleFireplaceStatusUpdate((FireplaceStatus) (tmpQueue.elementAt(2)).toInt());
+    MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
+    if (msgType == MessageType::HRBT) {
+      digitalWrite(heartBtLedPin, HIGH);
+      timeOutTimer.setTimeout(500, runTimeout);
+    } else {
+      MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
+      if (msgSpec == MessageSpecifier::BATT) {
+        //TODO
+      } else if (msgSpec == MessageSpecifier::FIRE) {
+        //TODO
+      }
     }
+
   }
 }
 
+void runTimeout() {
+  digitalWrite(heartBtLedPin, LOW);
+}
 
 void activityDetected() {
   occupancyMonitor.activityDetected();
@@ -167,7 +120,7 @@ void runRequestInfo() {
   }
 }
 
-void checkBluetoothConnection() {
+void updateBluetoothConnection() {
   if (digitalRead(btStatePin) == HIGH && !isConnected) {
     isConnected = true;
   } else if (digitalRead(btStatePin) == LOW && isConnected) {
@@ -175,18 +128,20 @@ void checkBluetoothConnection() {
   }
 }
 
-
 void setup() {
   Serial.begin(38400);
-  checkBluetoothConnection();
+  pinMode(heartBtLedPin, OUTPUT);
+  updateBluetoothConnection();
+  digitalWrite(heartBtLedPin, LOW);
   attachInterrupt(digitalPinToInterrupt(occupancyInputPin), activityDetected, RISING);
-  timer.setInterval(1000, runOccupancyMonitor);
-  timer.setInterval(1000, runMessageManager);
+  timer.setInterval(500, runOccupancyMonitor);
+  timer.setInterval(250, runMessageManager);
   timer.setInterval(1000, runThermostat);
-  timer.setInterval(1000, checkBluetoothConnection);
+  timer.setInterval(500, updateBluetoothConnection);
   timer.setInterval(5000, runRequestInfo);
 }
 
 void loop() {
   timer.run();
+  timeOutTimer.run();
 }
