@@ -272,6 +272,12 @@ void runConnectionUpdate() {
   }
 }
 
+void sendHeartBeatMsg(){
+  if(isConnected){
+    messageManager.addOutboundMsg(String((int) MessageType::HRBT));
+  }
+}
+
 void setup() {
   Serial.begin(38400);
 
@@ -301,6 +307,7 @@ void setup() {
   timer.setInterval(500, runConnectionUpdate);
   timer.setInterval(750, processMessages);
   timer.setInterval(1000, runFireplaceController);
+  timer.setInterval(2000, sendHeartBeatMsg);
   timer.setInterval(30000, runChargeController);
 }
 

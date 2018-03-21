@@ -43,7 +43,7 @@ enum class SystemMode {
 
 */
 enum class MessageType {
-  REQ = 0, CMD =1 , INFO = 2,UNKNOWN = 99
+  REQ = 0, CMD =1 , INFO = 2,HRBT = 3, UNKNOWN = 99
 };
 /*
 
