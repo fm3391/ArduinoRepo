@@ -64,7 +64,6 @@ class Fan {
 
 // Object Instantiations
 SimpleTimer mainTimer;
-SimpleTimer secondaryTimer;
 SimpleTimer timeOutTimer;
 OccupancyMonitor occupancyMonitor;
 MessageManager messageManager;
@@ -157,6 +156,15 @@ void runMain() {
   main.run();
 }
 
+void runUpdate(){
+  occupancyMonitor.run();
+  thermostat.run();
+  if (isConnected) {
+    messageManager.addOutboundMsg(reqBatteryMsg);
+    messageManager.addOutboundMsg(reqFireMsg);
+  }
+}
+
 void runTimeout() {
   digitalWrite(heartBtLedPin, LOW);
 }
@@ -164,24 +172,8 @@ void runTimeout() {
 void activityDetected() {
   occupancyMonitor.activityDetected();
 }
-
-void runOccupancyMonitor() {
-  occupancyMonitor.run();
-}
-
 void runMessageManager() {
   messageManager.run();
-}
-
-void runThermostat() {
-  thermostat.run();
-}
-
-void runRequestInfo() {
-  if (isConnected) {
-    messageManager.addOutboundMsg(reqBatteryMsg);
-    messageManager.addOutboundMsg(reqFireMsg);
-  }
 }
 
 void updateBluetoothConnection() {
@@ -213,17 +205,14 @@ void setup() {
   updateBluetoothConnection();
 
   // Begin timer and interrupt setup
-  //mainTimer.setInterval(1000, runMain);
-  //secondaryTimer.setInterval(500, runOccupancyMonitor);
-  secondaryTimer.setInterval(250, processInboundMsgs);
-  secondaryTimer.setInterval(500, runMessageManager);
-  //secondaryTimer.setInterval(1000, runThermostat);
-  secondaryTimer.setInterval(500, updateBluetoothConnection);
-  //secondaryTimer.setInterval(2000, runRequestInfo);
+  mainTimer.setInterval(1000, runMain);
+  mainTimer.setInterval(250, processInboundMsgs);
+  mainTimer.setInterval(500, runMessageManager);
+  mainTimer.setInterval(1000, runUpdate);
+  mainTimer.setInterval(500, updateBluetoothConnection);
 }
 
 void loop() {
   mainTimer.run();
-  secondaryTimer.run();
   timeOutTimer.run();
 }
