@@ -1,4 +1,4 @@
-/*
+/*
  * Fan.h
  *
  *  Created on: Jul 14, 2017
@@ -12,11 +12,14 @@
 
 class Fan {
   private:
-    int gatePin;
-
+    int relayPin;
+    bool isRunning;
+		
   public:
-    Fan();
-
+    Fan(int relayPin);
+    bool fanIsRunning();
+    void start();
+    void stop();
 };
 
 #endif
