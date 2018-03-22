@@ -1,3 +1,5 @@
+// Libraries
+#include <Fan.h>
 #include <Enums.h>
 #include <MessageManager.h>
 #include <SimpleTimer.h>
@@ -11,7 +13,6 @@ const int occupancyInputPin = 2;
 const int btStatePin = 10;
 const int thermostatHeatPin = 9;
 const int thermostatCoolPin = 8;
-
 const int batteryIndicatorPin = 5;
 const int statusIndicatorPin = 6;
 
@@ -35,92 +36,31 @@ const String cmdFireOffMsg =  String((int) MessageType::CMD) + MSG_SEPERATOR +
 // Bluetooth Connection State variable
 bool isConnected = false;
 
-
-class Fan {
-  private:
-    int relayPin;
-    bool isRunning;
-  public:
-    Fan(int relayPin) {
-      this->relayPin = relayPin;
-    }
-
-    bool fanIsRunning() {
-      return this->isRunning;
-    }
-
-    void start() {
-      digitalWrite(this->relayPin, HIGH);
-      isRunning = true;
-    }
-
-    void stop() {
-      digitalWrite(this->relayPin, LOW);
-      isRunning = false;
-    }
-};
-
-
+// TODO
+FireplaceStatus fireplaceStatus = FireplaceStatus::UNKNOWN;
+BatteryStatus batteryStatus = BatteryStatus::UNKNOWN;
+bool isInit = false;
 
 // Object Instantiations
 SimpleTimer mainTimer;
-SimpleTimer timeOutTimer;
+SimpleTimer hrtBtTimer;
 OccupancyMonitor occupancyMonitor;
 MessageManager messageManager;
 Thermostat thermostat(thermostatHeatPin, thermostatCoolPin);
-
-
-
 Fan fan(fanRelayPin);
 
 /*
   Main Class for managing the FireplaceController and Fan
 */
 class Main {
-  private:
-    bool isInit = false;
-    FireplaceStatus fireplaceStatus = FireplaceStatus::UNKNOWN;
-    BatteryStatus batteryStatus = BatteryStatus::UNKNOWN;
-
   public:
-    Main() {
-
-    }
-
     void run() {
       if (!isInit) {
-        if (isConnected) {
-          messageManager.addOutboundMsg(reqBatteryMsg);
-          messageManager.addOutboundMsg(reqFireMsg);
-        }
-        fan.stop();
+
         isInit = true;
       }
+    
 
-      // Begin running rules
-      if (!isConnected && fireplaceStatus != FireplaceStatus::UNKNOWN
-          && batteryStatus != BatteryStatus::UNKNOWN) {
-        fireplaceStatus = FireplaceStatus::UNKNOWN;
-        batteryStatus = BatteryStatus::UNKNOWN;
-      }
-
-      if (isConnected) {
-        if (thermostat.getMode() == ThermostatMode::OFF) {
-          // Make sure the fan is OFF and the Fireplace is OFF
-          if (fan.fanIsRunning()) {
-            fan.stop();
-          }
-
-          if (fireplaceStatus == FireplaceStatus::RUNNING) {
-            messageManager.addOutboundMsg(cmdFireOffMsg);
-          }
-        } else {
-
-        }
-
-      } else {
-
-      }
     }
 };
 
@@ -128,11 +68,15 @@ class Main {
 Main main;
 
 
+void runHbTimeout() {
+  digitalWrite(heartBtLedPin, LOW);
+}
+
 /*
    Processes messages from the FireplaceController
 */
 void processInboundMsgs() {
-
+  Serial.println("Processing Messages");
   while (messageManager.availableInboundMsg()) {
     String msg = messageManager.getInboundMessage();
     SimpleQueue tmpQueue;
@@ -140,7 +84,7 @@ void processInboundMsgs() {
     MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
     if (msgType == MessageType::HRBT) {
       digitalWrite(heartBtLedPin, HIGH);
-      timeOutTimer.setTimeout(500, runTimeout);
+      hrtBtTimer.setTimeout(500, runHbTimeout);
     } else {
       MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
       if (msgSpec == MessageSpecifier::BATT) {
@@ -153,30 +97,20 @@ void processInboundMsgs() {
 }
 
 void runMain() {
+  Serial.println("Main Running");
   main.run();
-}
-
-void runUpdate(){
-  occupancyMonitor.run();
-  thermostat.run();
-  if (isConnected) {
-    messageManager.addOutboundMsg(reqBatteryMsg);
-    messageManager.addOutboundMsg(reqFireMsg);
-  }
-}
-
-void runTimeout() {
-  digitalWrite(heartBtLedPin, LOW);
 }
 
 void activityDetected() {
   occupancyMonitor.activityDetected();
 }
 void runMessageManager() {
+  Serial.println("Message Manager Running");
   messageManager.run();
 }
 
 void updateBluetoothConnection() {
+  Serial.println("Bluetooth");
   if (digitalRead(btStatePin) == HIGH && !isConnected) {
     isConnected = true;
   } else if (digitalRead(btStatePin) == LOW && isConnected) {
@@ -208,11 +142,10 @@ void setup() {
   mainTimer.setInterval(1000, runMain);
   mainTimer.setInterval(250, processInboundMsgs);
   mainTimer.setInterval(500, runMessageManager);
-  mainTimer.setInterval(1000, runUpdate);
   mainTimer.setInterval(500, updateBluetoothConnection);
 }
 
 void loop() {
   mainTimer.run();
-  timeOutTimer.run();
+  hrtBtTimer.run();
 }
