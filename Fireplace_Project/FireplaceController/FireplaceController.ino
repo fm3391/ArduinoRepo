@@ -60,7 +60,7 @@ void setBluetoothState(BluetoothState newState) {
 }
 
 // Main Class
-class FireplaceController {
+class Main {
   private:
     SystemMode mode = SystemMode::NORMAL;
     MessageManager *messageManager;
@@ -93,7 +93,7 @@ class FireplaceController {
 
 
   public:
-    FireplaceController(MessageManager & messageManagerIn, ChargeController & chargeControllerIn)
+    Main(MessageManager & messageManagerIn, ChargeController & chargeControllerIn)
       : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
       this->messageManager = &messageManagerIn;
       this->chargeController = &chargeControllerIn;
@@ -201,12 +201,12 @@ class FireplaceController {
 // Object Instantiations
 MessageManager messageManager;
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
-FireplaceController fireplaceController(messageManager, chargeController);
+Main main(messageManager, chargeController);
 
 
 void runTimeout() {
-  if (fireplaceController.getFireplaceStatus() == FireplaceStatus::RUNNING && fireplaceController.getMode() == SystemMode::NORMAL) {
-    fireplaceController.handleCmdMsg(MessageSpecifier::FIRE, MessageCmd::FIRE_OFF);
+  if (main.getFireplaceStatus() == FireplaceStatus::RUNNING && main.getMode() == SystemMode::NORMAL) {
+    main.handleCmdMsg(MessageSpecifier::FIRE, MessageCmd::FIRE_OFF);
   }
 }
 
@@ -225,13 +225,13 @@ void processMessages() {
       switch (msgType) {
         case MessageType::REQ:
           if (msgSpec == MessageSpecifier::BATT || msgSpec == MessageSpecifier::FIRE) {
-            fireplaceController.handleReqMsg(msgSpec);
+            main.handleReqMsg(msgSpec);
           }
           break;
         case MessageType::CMD:
           if (msgSpec == MessageSpecifier::FIRE) {
             MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
-            fireplaceController.handleCmdMsg(msgSpec, cmd);
+            main.handleCmdMsg(msgSpec, cmd);
           }
           break;
       }
@@ -245,8 +245,8 @@ void processMessages() {
 /*
 
 */
-void runFireplaceController() {
-  fireplaceController.run();
+void runMain() {
+  main.run();
 }
 /*
 
@@ -306,7 +306,7 @@ void setup() {
   timer.setInterval(500, runMessageManager);
   timer.setInterval(500, runConnectionUpdate);
   timer.setInterval(750, processMessages);
-  timer.setInterval(1000, runFireplaceController);
+  timer.setInterval(1000, runMain);
   timer.setInterval(2000, sendHeartBeatMsg);
   timer.setInterval(30000, runChargeController);
 }

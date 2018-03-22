@@ -5,12 +5,16 @@
 #include <Thermostat.h>
 
 // Constants
-const int heartBtLedPin = 12;
+const int heartBtLedPin = 13;
 const int fanRelayPin = 11;
 const int occupancyInputPin = 2;
 const int btStatePin = 10;
 const int thermostatHeatPin = 9;
 const int thermostatCoolPin = 8;
+
+const int batteryIndicatorPin = 5;
+const int statusIndicatorPin = 6;
+
 const String MSG_SEPERATOR = ":";
 
 // Message used to request the current battery status from the FireplaceController
@@ -31,48 +35,105 @@ const String cmdFireOffMsg =  String((int) MessageType::CMD) + MSG_SEPERATOR +
 // Bluetooth Connection State variable
 bool isConnected = false;
 
+
+class Fan {
+  private:
+    int relayPin;
+    bool isRunning;
+  public:
+    Fan(int relayPin) {
+      this->relayPin = relayPin;
+    }
+
+    bool fanIsRunning() {
+      return this->isRunning;
+    }
+
+    void start() {
+      digitalWrite(this->relayPin, HIGH);
+      isRunning = true;
+    }
+
+    void stop() {
+      digitalWrite(this->relayPin, LOW);
+      isRunning = false;
+    }
+};
+
+
+
 // Object Instantiations
-SimpleTimer timer;
+SimpleTimer mainTimer;
+SimpleTimer secondaryTimer;
 SimpleTimer timeOutTimer;
 OccupancyMonitor occupancyMonitor;
 MessageManager messageManager;
 Thermostat thermostat(thermostatHeatPin, thermostatCoolPin);
 
+
+
+Fan fan(fanRelayPin);
+
 /*
   Main Class for managing the FireplaceController and Fan
 */
-class RoomManager {
+class Main {
   private:
     bool isInit = false;
-
+    FireplaceStatus fireplaceStatus = FireplaceStatus::UNKNOWN;
+    BatteryStatus batteryStatus = BatteryStatus::UNKNOWN;
 
   public:
-    RoomManager() {
+    Main() {
 
     }
 
     void run() {
       if (!isInit) {
-
+        if (isConnected) {
+          messageManager.addOutboundMsg(reqBatteryMsg);
+          messageManager.addOutboundMsg(reqFireMsg);
+        }
+        fan.stop();
         isInit = true;
       }
 
+      // Begin running rules
+      if (!isConnected && fireplaceStatus != FireplaceStatus::UNKNOWN
+          && batteryStatus != BatteryStatus::UNKNOWN) {
+        fireplaceStatus = FireplaceStatus::UNKNOWN;
+        batteryStatus = BatteryStatus::UNKNOWN;
+      }
 
-      
+      if (isConnected) {
+        if (thermostat.getMode() == ThermostatMode::OFF) {
+          // Make sure the fan is OFF and the Fireplace is OFF
+          if (fan.fanIsRunning()) {
+            fan.stop();
+          }
+
+          if (fireplaceStatus == FireplaceStatus::RUNNING) {
+            messageManager.addOutboundMsg(cmdFireOffMsg);
+          }
+        } else {
+
+        }
+
+      } else {
+
+      }
     }
 };
 
 // RoomManager Instantiation
-
-
-
-
+Main main;
 
 
 /*
    Processes messages from the FireplaceController
 */
 void processInboundMsgs() {
+
   while (messageManager.availableInboundMsg()) {
     String msg = messageManager.getInboundMessage();
     SimpleQueue tmpQueue;
@@ -89,8 +150,11 @@ void processInboundMsgs() {
         //TODO
       }
     }
-
   }
+}
+
+void runMain() {
+  main.run();
 }
 
 void runTimeout() {
@@ -130,18 +194,36 @@ void updateBluetoothConnection() {
 
 void setup() {
   Serial.begin(38400);
+  
+  // Set OUTPUT pinModes
   pinMode(heartBtLedPin, OUTPUT);
-  updateBluetoothConnection();
+  pinMode(fanRelayPin, OUTPUT);
+  pinMode(batteryIndicatorPin, OUTPUT);
+  pinMode(statusIndicatorPin, OUTPUT);
+  
+  // Set INPUT pinModes
+  pinMode(btStatePin, INPUT);
+  pinMode(thermostatHeatPin, INPUT);
+  pinMode(thermostatCoolPin, INPUT);
+  
+  // Initialize pins
   digitalWrite(heartBtLedPin, LOW);
-  attachInterrupt(digitalPinToInterrupt(occupancyInputPin), activityDetected, RISING);
-  timer.setInterval(500, runOccupancyMonitor);
-  timer.setInterval(250, runMessageManager);
-  timer.setInterval(1000, runThermostat);
-  timer.setInterval(500, updateBluetoothConnection);
-  timer.setInterval(5000, runRequestInfo);
+
+  // Check bluetooth connection
+  updateBluetoothConnection();
+
+  // Begin timer and interrupt setup
+  //mainTimer.setInterval(1000, runMain);
+  //secondaryTimer.setInterval(500, runOccupancyMonitor);
+  secondaryTimer.setInterval(250, processInboundMsgs);
+  secondaryTimer.setInterval(500, runMessageManager);
+  //secondaryTimer.setInterval(1000, runThermostat);
+  secondaryTimer.setInterval(500, updateBluetoothConnection);
+  //secondaryTimer.setInterval(2000, runRequestInfo);
 }
 
 void loop() {
-  timer.run();
+  mainTimer.run();
+  secondaryTimer.run();
   timeOutTimer.run();
 }

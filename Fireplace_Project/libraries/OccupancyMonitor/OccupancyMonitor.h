@@ -12,7 +12,7 @@ class OccupancyMonitor {
 
   public:
 		OccupancyMonitor();
-		bool roomOccupied();
+		bool roomIsOccupied();
 		void activityDetected();
 		void run();
 };

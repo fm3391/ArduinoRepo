@@ -4,7 +4,7 @@ OccupancyMonitor::OccupancyMonitor(){
 
 }
 
-bool OccupancyMonitor::roomOccupied(){
+bool OccupancyMonitor::roomIsOccupied(){
 	return isOccupied;
 }
 
