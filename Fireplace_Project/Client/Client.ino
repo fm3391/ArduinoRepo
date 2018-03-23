@@ -1,21 +1,21 @@
 // Libraries
 #include <Fan.h>
+#include <ActivityMonitor.h>
 #include <Enums.h>
 #include <MessageManager.h>
 #include <SimpleTimer.h>
-#include <OccupancyMonitor.h>
 #include <Thermostat.h>
 
 
 // Constants
-const int heartBtLedPin = 13;
+const int heartBtLedPin = 12;
 const int fanRelayPin = 11;
-const int pirInputPin = 3;
 const int btStatePin = 10;
-const int thermostatHeatPin = 9;
-const int thermostatCoolPin = 8;
-const int batteryIndicatorPin = 5;
-const int statusIndicatorPin = 6;
+const int thermostatHeatPin = 8;
+const int thermostatCoolPin = 7;
+const int battStatusRedPin = 6;     // PWM
+const int battStatusGreenPin = 5;   // PWM
+const int pirInputPin = 3;
 
 const String MSG_SEPERATOR = ":";
 
@@ -42,20 +42,55 @@ FireplaceStatus fireplaceStatus = FireplaceStatus::UNKNOWN;
 BatteryStatus batteryStatus = BatteryStatus::UNKNOWN;
 bool isInit = false;
 
-SimpleTimer mainTimer;
-SimpleTimer hrtBtTimer;
-OccupancyMonitor occupancyMonitor;
+SimpleTimer timer1;
+SimpleTimer timer2;
 MessageManager messageManager;
 Thermostat thermostat(thermostatHeatPin, thermostatCoolPin);
+ActivityMonitor activityMonitor;
 Fan fan(fanRelayPin);
+
+
+
+//
+void runConnectedRoutine() {
+
+}
+
+//
+void runDisConnectedRoutine() {
+
+}
 
 /*
 
 */
 int runMain() {
   if (!isInit) {
-
+    if (isConnected) {
+      messageManager.addOutboundMsg(reqBatteryMsg);
+      messageManager.addOutboundMsg(reqFireMsg);
+    }
+    fan.stop();
   }
+
+  if (isConnected) {
+    ThermostatMode thermoMode = thermostat.getMode();
+    if (thermoMode == ThermostatMode::OFF) {
+      if (fireplaceStatus == FireplaceStatus::RUNNING) {
+        messageManager.addOutboundMsg(cmdFireOffMsg);
+      }
+    } else if (thermoMode == ThermostatMode::HEATING) {
+      if (fireplaceStatus == FireplaceStatus::OFF) {
+        messageManager.addOutboundMsg(cmdFireOnMsg);
+      }
+
+    } else if (thermoMode == ThermostatMode::COOLING) {
+      if (fireplaceStatus == FireplaceStatus::RUNNING) {
+        messageManager.addOutboundMsg(cmdFireOffMsg);
+      }
+    }
+  }
+
 
 
   return 0;
@@ -75,15 +110,24 @@ void processMessages() {
     MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
     if (msgType == MessageType::HRBT) {
       digitalWrite(heartBtLedPin, HIGH);
-      hrtBtTimer.setTimeout(500, runTimeout);
+      timer2.setTimeout(500, runTimeout);
+    } else if (msgType == MessageType::INFO) {
+      MessageSpecifier msgSpec = (MessageSpecifier) (tmpQueue.elementAt(1)).toInt();
+      int msgVal = (tmpQueue.elementAt(2)).toInt();
+
+      if (msgSpec == MessageSpecifier::BATT) {
+        BatteryStatus newBattStatus = (BatteryStatus) msgVal;
+        if (newBattStatus != batteryStatus) {
+          batteryStatus = newBattStatus;
+        }
+
+      } else if (msgSpec == MessageSpecifier::FIRE) {
+        FireplaceStatus newFireStatus = (FireplaceStatus) msgVal;
+        if (fireplaceStatus != newFireStatus) {
+          fireplaceStatus = newFireStatus;
+        }
+      }
     }
-
-  }
-}
-
-void runDetectActivity(){
-  if(digitalRead(pirInputPin) == HIGH){
-    Serial.println("ACTIVITY");
   }
 }
 
@@ -95,6 +139,13 @@ void runThermostat() {
   thermostat.run();
 }
 
+void runInfoRequest() {
+  if (isConnected) {
+    messageManager.addOutboundMsg(reqBatteryMsg);
+    messageManager.addOutboundMsg(reqFireMsg);
+  }
+}
+
 void updateBluetoothConnection() {
   if (digitalRead(btStatePin) == HIGH && !isConnected) {
     isConnected = true;
@@ -103,35 +154,41 @@ void updateBluetoothConnection() {
   }
 }
 
+void runActivityMonitor() {
+  activityMonitor.run();
+}
+
 void setup() {
   Serial.begin(38400);
+
   // Set OUTPUT pinModes
   pinMode(heartBtLedPin, OUTPUT);
   pinMode(fanRelayPin, OUTPUT);
-  pinMode(batteryIndicatorPin, OUTPUT);
-  pinMode(statusIndicatorPin, OUTPUT);
+  pinMode(battStatusRedPin, OUTPUT);
+  pinMode(battStatusGreenPin, OUTPUT);
+
   // Set INPUT pinModes
   pinMode(btStatePin, INPUT);
   pinMode(thermostatHeatPin, INPUT);
   pinMode(thermostatCoolPin, INPUT);
   pinMode(pirInputPin, INPUT);
-  
-  // Initialize pins
-  digitalWrite(heartBtLedPin, LOW);
 
   // Check bluetooth connection
   updateBluetoothConnection();
 
-  // Begin timer and interrupt setup
-  mainTimer.setInterval(500, runMessageManager);
-  mainTimer.setInterval(750, processMessages);
-  mainTimer.setInterval(1000, runMain);
-  mainTimer.setInterval(1000, updateBluetoothConnection);
-  mainTimer.setInterval(1000, runThermostat);
-  mainTimer.setInterval(1000, runDetectActivity);
+  // Timer 1 Functions
+  timer1.setInterval(500, runMessageManager);
+  timer1.setInterval(500, processMessages);
+  timer1.setInterval(1000, runMain);
+  timer1.setInterval(2000, runInfoRequest);
+
+  // Timer 2 Functions
+  timer2.setInterval(1000, updateBluetoothConnection);
+  timer2.setInterval(1000, runActivityMonitor);
+  timer2.setInterval(1000, runThermostat);
 }
 
 void loop() {
-  mainTimer.run();
-  hrtBtTimer.run();
+  timer1.run();
+  timer2.run();
 }
