@@ -1,28 +1,26 @@
 #include "ActivityMonitor.h"
+#include "Arduino.h"
 
-ActivityMonitor::ActivityMonitor(){
-
+ActivityMonitor::ActivityMonitor(int pirPinIn){
+this->pirPin = pirPinIn;
 }
 
 bool ActivityMonitor::isActive(){
 	return is_Active;
 }
 
-void ActivityMonitor::activityDetected(){
-	if(!is_Active){
-		is_Active = true;
-	}
-	secondsSinceLastActivity = 0;
-}
-
 void ActivityMonitor::run() {
+	if(digitalRead(this->pirPin) == HIGH){
+		if(!is_Active){
+			is_Active = true;
+		}
+		counter = 0;
+	}
 	if(is_Active){
-	// Check if the room is inactive
-		if(secondsSinceLastActivity >= maxNonActivitySeconds){
+		counter++;
+		if(counter >= counterMax){
+			counter = 0;
 			is_Active = false;
-			secondsSinceLastActivity = 0;
-		}else{
-			secondsSinceLastActivity++;
 		}
 	}
 }

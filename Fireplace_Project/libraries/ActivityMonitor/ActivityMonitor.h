@@ -4,14 +4,17 @@
 #ifndef OccupancyMonitor_h
 #define OccupancyMonitor_h
 
+#include "Arduino.h"
+
 class ActivityMonitor {
   private:
+		int pirPin;
 		bool is_Active = false;
-    const int maxNonActivitySeconds = 300;
-    int secondsSinceLastActivity = 0;
+		int counter = 0;
+		const int counterMax = 300;
 
   public:
-		ActivityMonitor();
+		ActivityMonitor(int pirPinIn);
 		bool isActive();
 		void activityDetected();
 		void run();
