@@ -24,21 +24,18 @@ void runTimeout() {
 
 class MainApp {
   private:
-
+  FireplaceStatus fireStatus = FireplaceStatus::UNKNOWN;
+  BatteryStatus battStatus = BatteryStatus::UNKNOWN;
 
   public:
 
     void run() {
-      String thermostatMode = "";
-      if (thermostat.getMode() == ThermostatMode::OFF) {
-        thermostatMode = "OFF";
-      } else if (thermostat.getMode() == ThermostatMode::HEATING) {
-        thermostatMode = "HEATING";
-      } else if (thermostat.getMode() == ThermostatMode::COOLING) {
-        thermostatMode = "COOLING";
+      if(!btController.isConnected()){
+        fireStatus = FireplaceStatus::UNKNOWN;
+        battStatus = BatteryStatus::UNKNOWN;
       }
+      
 
-      Serial.println(thermostatMode);
     }
 };
 
