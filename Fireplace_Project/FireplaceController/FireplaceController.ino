@@ -31,250 +31,206 @@ const int overrideOffPin = 10; // TODO
 const String EMPTY = "";
 const String SEPERATOR = ":";
 
-const long timeOutMax = (long) 600000;
-
-BluetoothState btState;
-bool isConnected = false;
 bool lowBatt = false;
 
 SimpleTimer timer;
-int timeOutTimerId;
+SimpleTimer tmpTimer;
 
+class BluetoothController {
+  private:
+    int btStatePin;
+    int btMosfetPin;
+    bool is_Connected;
+    bool is_Enabled;
 
-/*
-
-*/
-void setBluetoothState(BluetoothState newState) {
-  if (newState != btState) {
-    switch (newState) {
-      case BluetoothState::ENABLED:
-        digitalWrite(btMosfetPin, HIGH);
-        btState = BluetoothState::ENABLED;
-        break;
-      case BluetoothState::DISABLED:
-        digitalWrite(btMosfetPin, LOW);
-        btState = BluetoothState::DISABLED;
-        break;
+  public:
+    BluetoothController(int btStatePinIn, int btMosfetPinIn) {
+      this->btStatePin = btStatePinIn;
+      this->btMosfetPin = btMosfetPinIn;
+      this->is_Connected = false;
+      this->is_Enabled = false;
     }
-  }
-}
 
-// Main Class
-class Main {
+    void setEnabled(bool enable) {
+      if (enable) {
+        is_Enabled = true;
+        digitalWrite(this->btMosfetPin, HIGH);
+      } else {
+        is_Enabled = false;
+        digitalWrite(this->btMosfetPin, LOW);
+      }
+    }
+
+    bool isEnabled() {
+      return is_Enabled;
+    }
+
+    bool isConnected() {
+      return is_Connected;
+    }
+
+    void run() {
+      int btStatePinVal = digitalRead(this->btStatePin);
+      if(btStatePinVal == 1 && !is_Connected){
+          is_Connected = true;
+          Serial.println("CONNECTED");        
+      }else if(btStatePinVal == 0 && is_Connected){
+          is_Connected = false;
+          Serial.println("DISCONNECTED");
+      }
+    }
+
+
+};
+
+
+ChargeController chargeController(ccRelayPin, ccBattInputPin);
+BluetoothController btController(btStatePin, btMosfetPin);
+MessageManager messageManager;
+
+
+class MainApp {
   private:
     SystemMode mode = SystemMode::NORMAL;
-    MessageManager *messageManager;
-    ChargeController *chargeController;
     ValveController valveController;
     FireplaceStatus fireplaceStatus;
     bool isInit = false;
 
-
-    /*
-
-    */
     void setFireplaceState(FireplaceStatus newFireplaceStatus) {
-      if (fireplaceStatus != newFireplaceStatus) {
-        switch (newFireplaceStatus) {
-          case FireplaceStatus::RUNNING:
-            valveController.openValve(chargeController->getVoltage());
-            fireplaceStatus = FireplaceStatus::RUNNING;
-            timeOutTimerId = timer.setTimeout(timeOutMax, runTimeout);
-            break;
-          case FireplaceStatus::OFF:
-            valveController.closeValve(chargeController->getVoltage());
-            fireplaceStatus = FireplaceStatus::OFF;
-            timer.deleteTimer(timeOutTimerId);
-            break;
-        }
-        handleReqMsg(MessageSpecifier::FIRE);
+      switch (newFireplaceStatus) {
+        case FireplaceStatus::RUNNING:
+          Serial.println("FIRE ON");
+          valveController.openValve(chargeController.getVoltage());
+          fireplaceStatus = FireplaceStatus::RUNNING;
+          break;
+        case FireplaceStatus::OFF:
+          Serial.println("FIRE OFF");
+          valveController.closeValve(chargeController.getVoltage());
+          fireplaceStatus = FireplaceStatus::OFF;
+          break;
       }
     }
 
-
   public:
-    Main(MessageManager & messageManagerIn, ChargeController & chargeControllerIn)
-      : valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
-      this->messageManager = &messageManagerIn;
-      this->chargeController = &chargeControllerIn;
+    MainApp(): valveController(vcDirPin, vcPwmPin, vcMosfetPin) {
+
     }
 
-    SystemMode getMode() {
-      return mode;
+    void handleCmdMessage(MessageCmd msgCmd) {
+      if (mode == SystemMode::NORMAL && btController.isConnected()) {
+        if (msgCmd == MessageCmd::FIRE_ON &&
+            fireplaceStatus == FireplaceStatus::OFF) {
+          setFireplaceState(FireplaceStatus::RUNNING);
+        } else if (msgCmd == MessageCmd::FIRE_OFF &&
+                   fireplaceStatus == FireplaceStatus::RUNNING) {
+          setFireplaceState(FireplaceStatus::OFF);
+        }
+      }
     }
 
-    FireplaceStatus getFireplaceStatus() {
+    FireplaceStatus getFireStatus() {
       return fireplaceStatus;
     }
 
-    /*
-
-    */
-    void handleCmdMsg(MessageSpecifier msgSpec, MessageCmd msgCmd) {
-      if (mode != SystemMode::OVERRIDE) {
-        if (msgCmd == MessageCmd::FIRE_ON) {
-          if (fireplaceStatus != FireplaceStatus::RUNNING && !lowBatt) {
-            setFireplaceState(FireplaceStatus::RUNNING);
-          }
-        } else if (msgCmd == MessageCmd::FIRE_OFF) {
-          if (fireplaceStatus == FireplaceStatus::RUNNING) {
-            setFireplaceState(FireplaceStatus::OFF);
-          }
-        }
-
-      }
-    }
-
-    /*
-
-    */
-    void handleReqMsg(MessageSpecifier msgSpec) {
-      String msgOut = "";
-      switch (msgSpec) {
-        case MessageSpecifier::BATT:
-          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::BATT)
-                   + SEPERATOR + String((int) chargeController->getBatteryStatus());
-          messageManager->addOutboundMsg(msgOut);
-          break;
-        case MessageSpecifier::FIRE:
-          msgOut = String((int)MessageType::INFO) + SEPERATOR + String((int) MessageSpecifier::FIRE)
-                   + SEPERATOR + String((int) fireplaceStatus);
-          messageManager->addOutboundMsg(msgOut);
-          break;
-      }
-    }
-
-    /*
-
-    */
     void run() {
       if (!isInit) {
-        chargeController->run();
-        messageManager->run();
         setFireplaceState(FireplaceStatus::OFF);
-        //if (isConnected) {
-        if (true) {
-          handleReqMsg(MessageSpecifier::BATT);
-          delay(500);
-          handleReqMsg(MessageSpecifier::FIRE);
-        }
         isInit = true;
       }
 
-      /*
-
-      */
-      if (chargeController->getBatteryStatus() == BatteryStatus::LOW_BATT && btState == BluetoothState::ENABLED) {
-        setBluetoothState(BluetoothState::DISABLED);
-      } else if (chargeController->getBatteryStatus() > BatteryStatus::LOW_BATT && btState == BluetoothState::DISABLED) {
-        setBluetoothState(BluetoothState::ENABLED);
+      if (chargeController.getBatteryStatus() > BatteryStatus::WARNING &&
+          !btController.isEnabled()) {
+        btController.setEnabled(true);
+      } else if (chargeController.getBatteryStatus() <= BatteryStatus::WARNING &&
+                 btController.isEnabled()) {
+        btController.setEnabled(false);
       }
 
-      /*
+      if (mode == SystemMode::NORMAL &&
+          (digitalRead(overrideOnPin) == HIGH ||
+           digitalRead(overrideOffPin) == HIGH)) {
+        mode = SystemMode::OVERRIDE;
+      } else if (mode == SystemMode::OVERRIDE &&
+                 (digitalRead(overrideOnPin) == LOW &&
+                  digitalRead(overrideOffPin) == LOW)) {
+        mode = SystemMode::NORMAL;
+      }
 
-      */
+      if (mode == SystemMode::OVERRIDE) {
+        if (digitalRead(overrideOnPin) == HIGH &&
+            fireplaceStatus == FireplaceStatus::OFF) {
+          setFireplaceState(FireplaceStatus::RUNNING);
+        } else if (digitalRead(overrideOffPin) == HIGH &&
+                   fireplaceStatus == FireplaceStatus::RUNNING) {
+          setFireplaceState(FireplaceStatus::OFF);
+        }
+      }
 
       if (mode == SystemMode::NORMAL) {
-        if ((digitalRead(overrideOnPin) == HIGH || digitalRead(overrideOffPin) == HIGH)) {
-          mode = SystemMode::OVERRIDE;
-        } else if (fireplaceStatus == FireplaceStatus::RUNNING && !isConnected) {
+        if (!btController.isConnected() &&
+            fireplaceStatus == FireplaceStatus::RUNNING) {
           setFireplaceState(FireplaceStatus::OFF);
         }
       }
 
 
-      /*
-
-      */
-      if (mode == SystemMode::OVERRIDE) {
-        if (digitalRead(overrideOnPin) == HIGH && fireplaceStatus != FireplaceStatus::RUNNING) {
-          setFireplaceState(FireplaceStatus::RUNNING);
-        } else if (digitalRead(overrideOffPin) == HIGH && fireplaceStatus != FireplaceStatus::OFF) {
-          setFireplaceState(FireplaceStatus::OFF);
-        } else {
-          mode = SystemMode::NORMAL;
-        }
-      }
     }
+
 };
 
-// Object Instantiations
-MessageManager messageManager;
-ChargeController chargeController(ccRelayPin, ccBattInputPin);
-Main main(messageManager, chargeController);
+MainApp mainApp;
 
 
-void runTimeout() {
-  if (main.getFireplaceStatus() == FireplaceStatus::RUNNING && main.getMode() == SystemMode::NORMAL) {
-    main.handleCmdMsg(MessageSpecifier::FIRE, MessageCmd::FIRE_OFF);
-  }
-}
 
-/*
-
-*/
 void processMessages() {
-  if (isConnected) {
+  if (btController.isConnected()) {
     while (messageManager.availableInboundMsg()) {
       String msg = messageManager.getInboundMessage();
       SimpleQueue tmpQueue;
       messageManager.parseMessage(msg, tmpQueue);
       MessageType msgType = (MessageType) (tmpQueue.elementAt(0)).toInt();
       MessageSpecifier msgSpec = (MessageSpecifier)(tmpQueue.elementAt(1)).toInt();
+      if (msgType == MessageType::CMD) {
 
-      switch (msgType) {
-        case MessageType::REQ:
-          if (msgSpec == MessageSpecifier::BATT || msgSpec == MessageSpecifier::FIRE) {
-            main.handleReqMsg(msgSpec);
-          }
-          break;
-        case MessageType::CMD:
-          if (msgSpec == MessageSpecifier::FIRE) {
-            MessageCmd cmd = (MessageCmd) (tmpQueue.elementAt(2)).toInt();
-            main.handleCmdMsg(msgSpec, cmd);
-          }
-          break;
+        mainApp.handleCmdMessage((MessageCmd)(tmpQueue.elementAt(2)).toInt());
+      } else if (msgType == MessageType::REQ) {
+        if (msgSpec == MessageSpecifier::FIRE) {
+          messageManager.addOutboundMsg(String((int)MessageType::INFO) + SEPERATOR +
+                                        String((int) MessageSpecifier::FIRE) + SEPERATOR +
+                                        String((int) mainApp.getFireStatus()));
+        } else if (msgSpec == MessageSpecifier::BATT) {
+          messageManager.addOutboundMsg(String((int)MessageType::INFO) + SEPERATOR +
+                                        String((int) MessageSpecifier::BATT) + SEPERATOR +
+                                        String((int) chargeController.getBatteryStatus()));
+        }
       }
 
     }
+
   } else if (messageManager.availableInboundMsg()) {
     messageManager.clearInboundMsgs();
   }
 }
 
-/*
-
-*/
-void runMain() {
-  main.run();
+void runMainApp() {
+  mainApp.run();
 }
-/*
 
-*/
-void runMessageManager() {
-  messageManager.run();
-}
-/*
-
-*/
 void runChargeController() {
   chargeController.run();
 }
-/*
 
-*/
-void runConnectionUpdate() {
-  int connectionVal = digitalRead(btStatePin);
-  if (isConnected && connectionVal == LOW) {
-    isConnected = false;
-  } else if (!isConnected && connectionVal == HIGH) {
-    isConnected = true;
-  }
+void runBluetoothController() {
+  btController.run();
 }
 
-void sendHeartBeatMsg(){
-  if(isConnected){
-    messageManager.addOutboundMsg(String((int) MessageType::HRBT));
+void runMessageManager() {
+  messageManager.run();
+}
+
+void sendHeartBtMsg() {
+  if(btController.isConnected()){
+    messageManager.addOutboundMsg(String((int)MessageType::HRBT));
   }
 }
 
@@ -297,18 +253,15 @@ void setup() {
   digitalWrite(ccRelayPin, LOW);
   digitalWrite(vcMosfetPin, LOW);
 
-  // Update Connection Status
-  setBluetoothState(BluetoothState::ENABLED );
-  runConnectionUpdate();
-
+  runChargeController();
 
   // Setup Timers
-  timer.setInterval(500, runMessageManager);
-  timer.setInterval(500, runConnectionUpdate);
-  timer.setInterval(750, processMessages);
-  timer.setInterval(1000, runMain);
-  timer.setInterval(2000, sendHeartBeatMsg);
   timer.setInterval(30000, runChargeController);
+  timer.setInterval(500, runMessageManager);
+  timer.setInterval(500, processMessages);
+  timer.setInterval(1000, runBluetoothController);
+  timer.setInterval(2000, sendHeartBtMsg);
+  timer.setInterval(1000, runMainApp);
 }
 
 void loop() {

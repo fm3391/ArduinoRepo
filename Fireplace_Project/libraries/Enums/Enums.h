@@ -15,12 +15,7 @@ enum class ThermostatMode {
 enum class FireplaceStatus {
   OFF = 0, RUNNING = 1, UNKNOWN = 99
 };
-/*
 
-*/
-enum class ChargingStatus {
-  NOT_CHARGING = 0, CHARGING = 1, UNKNOWN = 99
-};
 /*
 
 */
@@ -29,10 +24,6 @@ enum class BatteryStatus {
 };
 /*
 
-*/
-enum class BluetoothState {
-  DISABLED = 0, ENABLED = 1
-};
 /*
 
 */
