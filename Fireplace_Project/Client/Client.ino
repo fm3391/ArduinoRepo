@@ -20,8 +20,16 @@ const int fanPin = 4;
 
 const String SEPERATOR = ":";
 
-const String reqBattStatusMsg = String((int)MessageType::REQ) + SEPERATOR + String((int)MessageSpecifier::BATT);
-const String reqFireStatusMsg = String((int)MessageType::REQ) + SEPERATOR + String((int)MessageSpecifier::FIRE);
+const String REQ_BATT_STATUS_MSG = String((int)MessageType::REQ) + SEPERATOR + String((int)MessageSpecifier::BATT);
+const String REQ_FIRE_STATUS_MSG = String((int)MessageType::REQ) + SEPERATOR + String((int)MessageSpecifier::FIRE);
+
+const String CMD_FIRE_ON_MSG =  String((int)MessageType::CMD) + SEPERATOR +
+                                String((int)MessageSpecifier::FIRE) + SEPERATOR +
+                                String((int)MessageCmd::FIRE_ON);
+                                
+const String CMD_FIRE_OFF_MSG = String((int)MessageType::CMD) + SEPERATOR + 
+                                String((int)MessageSpecifier::FIRE) + SEPERATOR +
+                                String((int)MessageCmd::FIRE_OFF);
 
 SimpleTimer timer;
 MessageManager messageManager;
@@ -41,19 +49,8 @@ class MainApp {
     BatteryStatus battStatus = BatteryStatus::UNKNOWN;
     int battUpdateCounter = 0;
     const int battUpdateCounterMax = 60;
-
-    /**
-       TODO - Add comment here
-    */
-    void runStartUpDelay() {
-      unsigned long startTime = millis();
-      Serial.print("Starting up");
-      while ((millis() - startTime) < 5000) {
-        // Waiting for all objects to initialize and run
-        Serial.print(".");
-      }
-      Serial.println(".");
-    }
+    int fireUpdateCounter = 0;
+    const int fireUpdateCounterMax = 5;
 
   public:
     /**
@@ -78,45 +75,60 @@ class MainApp {
       TODO - Add comment here
     */
     void requestFireStatus() {
-      messageManager.addOutboundMsg(reqBattStatusMsg);
+      messageManager.addOutboundMsg(REQ_FIRE_STATUS_MSG);
     }
 
     /**
       TODO - Add comment here
     */
     void requestBattStatus() {
-      messageManager.addOutboundMsg(reqBattStatusMsg);
+      messageManager.addOutboundMsg(REQ_BATT_STATUS_MSG);
     }
 
     /**
       TODO - Add comment here
     */
     void run() {
-      if (!isInit) {
-        // TODO - Add commment here
-        runStartUpDelay();
-
-        // TODO - Add commment here
-        if (btController.isConnected()) {
-          requestFireStatus();
-          requestBattStatus();
-        }
-        isInit = true;
-      }
 
       // Check to see if the Bluetooth module is connected
       if (btController.isConnected()) {
-        // Request update on the fireplace
-        requestFireStatus();
+        if (fireStatus == FireplaceStatus::UNKNOWN) {
+          requestFireStatus();
+        }
+        if (battStatus == BatteryStatus::UNKNOWN) {
+          requestBattStatus();
+        }
 
-        if (battUpdateCounter >= battUpdateCounterMax) {
+        // Request update on battery status
+        if (battUpdateCounter < battUpdateCounterMax) {
+          battUpdateCounter++;
+        } else {
           requestBattStatus();
           battUpdateCounter = 0;
-        } else {
-          battUpdateCounter++;
         }
+
+
+        if (fireUpdateCounter < fireUpdateCounterMax) {
+          fireUpdateCounter++;
+        } else {
+          requestFireStatus();
+          fireUpdateCounter = 0;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
       } else {
         battUpdateCounter = 0;
+        fireUpdateCounter = 0;
       }
 
 
@@ -182,13 +194,19 @@ void setup() {
   pinMode(heatPin, INPUT);
   pinMode(coolPin, INPUT);
 
-  runMainApp();
+  runBluetoothController();
 
   timer.setInterval(500, processMessages);
   timer.setInterval(500, runMessageManager);
   timer.setInterval(500, runBluetoothController);
   timer.setInterval(1000, runThermostat);
   timer.setInterval(1000, runActivityMonitor);
+
+  unsigned long startTime = millis();
+  while((millis() - startTime) < 5000){
+    
+  }
+  
   timer.setInterval(1000, runMainApp);
 
 }
