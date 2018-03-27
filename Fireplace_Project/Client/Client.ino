@@ -1,22 +1,24 @@
+// Libraries
 #include <Fan.h>
-
 #include <ActivityMonitor.h>
-
 #include <Thermostat.h>
 #include <BluetoothController.h>
-
-// Libraries
 #include <Enums.h>
 #include <MessageManager.h>
 #include <SimpleTimer.h>
 
-// Constants
-const int heartBtLedPin = 12;
+// Input pins
 const int btStatePin = 6; // Pin that indicate connection status
 const int heatPin = 7;
 const int coolPin = 8;
 const int pirPin = 5;
 const int fanPin = 4;
+
+// Indicator pins
+const int statusIndicator_RPin = 9;
+const int statusIndicator_GPin = 10;
+const int statusIndicator_BPin = 11;
+const int heartBtLedPin = 12;
 
 const String SEPERATOR = ":";
 
@@ -26,10 +28,13 @@ const String REQ_FIRE_STATUS_MSG = String((int)MessageType::REQ) + SEPERATOR + S
 const String CMD_FIRE_ON_MSG =  String((int)MessageType::CMD) + SEPERATOR +
                                 String((int)MessageSpecifier::FIRE) + SEPERATOR +
                                 String((int)MessageCmd::FIRE_ON);
-                                
-const String CMD_FIRE_OFF_MSG = String((int)MessageType::CMD) + SEPERATOR + 
+
+const String CMD_FIRE_OFF_MSG = String((int)MessageType::CMD) + SEPERATOR +
                                 String((int)MessageSpecifier::FIRE) + SEPERATOR +
                                 String((int)MessageCmd::FIRE_OFF);
+
+
+
 
 SimpleTimer timer;
 MessageManager messageManager;
@@ -37,6 +42,8 @@ BluetoothController btController(btStatePin, -99);
 Thermostat thermostat(heatPin, coolPin);
 ActivityMonitor activityMonitor(pirPin);
 Fan fan(fanPin);
+
+int mainAppTimerId;
 
 void runTimeout() {
   digitalWrite(heartBtLedPin, LOW);
@@ -89,15 +96,43 @@ class MainApp {
       TODO - Add comment here
     */
     void run() {
+      if (!isInit) {
+        Serial.print("Waiting for connection");
+        while (!btController.isConnected()) {
+          Serial.print(".");
+          delay(500);
+        }
+        Serial.println("");
+        Serial.println("Connected! Beginning initialize");
+        requestFireStatus();
+        requestBattStatus();
+        int waitCounter = 0;
+        while (fireStatus == FireplaceStatus::UNKNOWN || battStatus == BatteryStatus::UNKNOWN) {
+          Serial.println("FireStatus: " + String((int) fireStatus) + " BattStatus: " + String((int) battStatus));
+          if (waitCounter == 5) {
+            requestFireStatus();
+            requestBattStatus();
+            waitCounter = 0;
+          } else {
+            waitCounter++;
+          }
+          delay(500);
+        }
+        Serial.println("Finished!");
+        timer.restartTimer(mainAppTimerId);
+        timer.enable(mainAppTimerId);
+
+        isInit = true;
+      }
 
       // Check to see if the Bluetooth module is connected
       if (btController.isConnected()) {
-        if (fireStatus == FireplaceStatus::UNKNOWN) {
-          requestFireStatus();
-        }
-        if (battStatus == BatteryStatus::UNKNOWN) {
-          requestBattStatus();
-        }
+
+
+
+
+
+
 
         // Request update on battery status
         if (battUpdateCounter < battUpdateCounterMax) {
@@ -114,16 +149,6 @@ class MainApp {
           requestFireStatus();
           fireUpdateCounter = 0;
         }
-
-
-
-
-
-
-
-
-
-
 
 
       } else {
@@ -187,28 +212,31 @@ void setup() {
 
   // Set OUTPUT pinModes
   pinMode(heartBtLedPin, OUTPUT);
-
+  pinMode(fanPin, OUTPUT);
 
   // Set INPUT pinModes
   pinMode(btStatePin, INPUT);
   pinMode(heatPin, INPUT);
   pinMode(coolPin, INPUT);
+  pinMode(pirPin, INPUT);
 
   runBluetoothController();
 
+  // Messaging Timers
   timer.setInterval(500, processMessages);
   timer.setInterval(500, runMessageManager);
+
+  // Bluetooth Timer
   timer.setInterval(500, runBluetoothController);
+
+  // Main Timer
+  mainAppTimerId = timer.setInterval(1000, runMainApp);
+  timer.disable(mainAppTimerId);
+  runMainApp();
+
+  // Sensor Timers
   timer.setInterval(1000, runThermostat);
   timer.setInterval(1000, runActivityMonitor);
-
-  unsigned long startTime = millis();
-  while((millis() - startTime) < 5000){
-    
-  }
-  
-  timer.setInterval(1000, runMainApp);
-
 }
 
 void loop() {
