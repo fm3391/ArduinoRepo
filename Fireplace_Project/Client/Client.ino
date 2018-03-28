@@ -75,13 +75,13 @@ void enableAllTimers(bool enable) {
   }
 }
 
-void startMainAppTimer() {
-  timer.restartTimer(timer4Id);
-  timer.enable(timer4Id);
-}
-
-void stopMainAppTimer() {
-  timer.disable(timer4Id);
+void enableMainAppTimer(bool enable) {
+  if (enable) {
+    timer.restartTimer(timer4Id);
+    timer.enable(timer4Id);
+  } else {
+    timer.disable(timer4Id);
+  }
 }
 
 void runTimeout() {
@@ -106,6 +106,7 @@ class MainApp {
       requestBattStatus();
       while (fireStatus == FireplaceStatus::UNKNOWN ||
              battStatus == BatteryStatus::UNKNOWN) {
+        Serial.println("FireStatus: " + String((int) fireStatus) + " BattStatus: " + String((int) battStatus));
         runBluetoothController();
         delay(500);
         messageManager.run();
@@ -161,7 +162,6 @@ class MainApp {
     void run() {
       if (!isInit) {
         while (!btController.isConnected()) {
-          Serial.print(".");
           runBluetoothController();
           delay(500);
         }
@@ -207,14 +207,10 @@ class MainApp {
           battUpdateCounter = 0;
           fireUpdateCounter = 0;
           enableAllTimers(false);
-          startMainAppTimer();
+          enableMainAppTimer(true);
         }
-
         runBluetoothController();
-
       }
-
-
     }
 };
 
