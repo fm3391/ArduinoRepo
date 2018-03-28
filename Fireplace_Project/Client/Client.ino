@@ -43,6 +43,32 @@ Thermostat thermostat(heatPin, coolPin);
 ActivityMonitor activityMonitor(pirPin);
 Fan fan(fanPin);
 
+
+class TimerManager {
+  private:
+    SimpleTimer *timer;
+
+  public:
+    TimerManager(SimpleTimer &timerIn) {
+      this->timer = &timerIn);
+    }
+
+    void enableAll(){
+      
+    }
+
+    void disableAll(){
+      
+    }
+
+    
+
+};
+
+
+
+
+
 int timer1Id;
 int timer2Id;
 int timer3Id;
