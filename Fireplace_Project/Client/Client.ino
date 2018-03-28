@@ -43,7 +43,46 @@ Thermostat thermostat(heatPin, coolPin);
 ActivityMonitor activityMonitor(pirPin);
 Fan fan(fanPin);
 
-int mainAppTimerId;
+int timer1Id;
+int timer2Id;
+int timer3Id;
+int timer4Id;
+int timer5Id;
+int timer6Id;
+
+
+void enableAllTimers(bool enable) {
+  if (enable) {
+    timer.enable(timer1Id);
+    timer.restartTimer(timer1Id);
+    timer.enable(timer2Id);
+    timer.restartTimer(timer2Id);
+    timer.enable(timer3Id);
+    timer.restartTimer(timer3Id);
+    timer.enable(timer4Id);
+    timer.restartTimer(timer4Id);
+    timer.enable(timer5Id);
+    timer.restartTimer(timer5Id);
+    timer.enable(timer6Id);
+    timer.restartTimer(timer6Id);
+  } else {
+    timer.disable(timer1Id);
+    timer.disable(timer2Id);
+    timer.disable(timer3Id);
+    timer.disable(timer4Id);
+    timer.disable(timer5Id);
+    timer.disable(timer6Id);
+  }
+}
+
+void startMainAppTimer() {
+  timer.restartTimer(timer4Id);
+  timer.enable(timer4Id);
+}
+
+void stopMainAppTimer() {
+  timer.disable(timer4Id);
+}
 
 void runTimeout() {
   digitalWrite(heartBtLedPin, LOW);
@@ -58,6 +97,30 @@ class MainApp {
     const int battUpdateCounterMax = 60;
     int fireUpdateCounter = 0;
     const int fireUpdateCounterMax = 5;
+
+
+    void runInitialize() {
+      enableAllTimers(false);
+      int cntr = 0;
+      requestFireStatus();
+      requestBattStatus();
+      while (fireStatus == FireplaceStatus::UNKNOWN ||
+             battStatus == BatteryStatus::UNKNOWN) {
+        runBluetoothController();
+        delay(500);
+        messageManager.run();
+        delay(500);
+        processMessages();
+        if (cntr == 5) {
+          requestFireStatus();
+          requestBattStatus();
+          cntr = 0;
+        } else {
+          cntr++;
+        }
+      }
+      enableAllTimers(true);
+    }
 
   public:
     /**
@@ -97,36 +160,22 @@ class MainApp {
     */
     void run() {
       if (!isInit) {
-        Serial.print("Waiting for connection");
         while (!btController.isConnected()) {
           Serial.print(".");
+          runBluetoothController();
           delay(500);
         }
-        Serial.println("");
-        Serial.println("Connected! Beginning initialize");
-        requestFireStatus();
-        requestBattStatus();
-        int waitCounter = 0;
-        while (fireStatus == FireplaceStatus::UNKNOWN || battStatus == BatteryStatus::UNKNOWN) {
-          Serial.println("FireStatus: " + String((int) fireStatus) + " BattStatus: " + String((int) battStatus));
-          if (waitCounter == 5) {
-            requestFireStatus();
-            requestBattStatus();
-            waitCounter = 0;
-          } else {
-            waitCounter++;
-          }
-          delay(500);
-        }
-        Serial.println("Finished!");
-        timer.restartTimer(mainAppTimerId);
-        timer.enable(mainAppTimerId);
-
+        runInitialize();
         isInit = true;
       }
 
       // Check to see if the Bluetooth module is connected
       if (btController.isConnected()) {
+        if (fireStatus == FireplaceStatus::UNKNOWN
+            || battStatus == BatteryStatus::UNKNOWN) {
+          runInitialize();
+          enableAllTimers(true);
+        }
 
 
 
@@ -152,8 +201,17 @@ class MainApp {
 
 
       } else {
-        battUpdateCounter = 0;
-        fireUpdateCounter = 0;
+        if (fireStatus != FireplaceStatus::UNKNOWN ||  battStatus != BatteryStatus::UNKNOWN) {
+          fireStatus = FireplaceStatus::UNKNOWN;
+          battStatus = BatteryStatus::UNKNOWN;
+          battUpdateCounter = 0;
+          fireUpdateCounter = 0;
+          enableAllTimers(false);
+          startMainAppTimer();
+        }
+
+        runBluetoothController();
+
       }
 
 
@@ -223,20 +281,21 @@ void setup() {
   runBluetoothController();
 
   // Messaging Timers
-  timer.setInterval(500, processMessages);
-  timer.setInterval(500, runMessageManager);
+  timer1Id = timer.setInterval(500, processMessages);
+  timer2Id = timer.setInterval(500, runMessageManager);
 
   // Bluetooth Timer
-  timer.setInterval(500, runBluetoothController);
+  timer3Id = timer.setInterval(500, runBluetoothController);
 
   // Main Timer
-  mainAppTimerId = timer.setInterval(1000, runMainApp);
-  timer.disable(mainAppTimerId);
-  runMainApp();
+  timer4Id = timer.setInterval(1000, runMainApp);
 
   // Sensor Timers
-  timer.setInterval(1000, runThermostat);
-  timer.setInterval(1000, runActivityMonitor);
+  timer5Id = timer.setInterval(1000, runThermostat);
+  timer6Id = timer.setInterval(1000, runActivityMonitor);
+
+
+  runMainApp();
 }
 
 void loop() {
