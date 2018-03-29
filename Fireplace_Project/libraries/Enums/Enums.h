@@ -3,6 +3,17 @@
 */
 #ifndef Enums_h
 #define Enums_h
+
+
+enum class TimerType{
+	PROCESS_MSGS = 0,
+	MSG_MANAGER = 1,
+	BT_CONTROLLER = 2,
+	MAIN_APP = 3,
+	THERMOSTAT = 4,
+	ACTIVITY_MONITOR = 5
+};
+
 /*
 
 */

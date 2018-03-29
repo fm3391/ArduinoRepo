@@ -9,12 +9,13 @@
 #define MessageManager_h
 
 #include "Arduino.h"
+#include "QList.h"
 #include "SimpleQueue.h"
 
 class MessageManager {
   private:
-	SimpleQueue inboundMsgQueue;
-	SimpleQueue outboundMsgQueue;
+	QList<String> inboundMsgQueue;
+	QList<String> outboundMsgQueue;
 	const char EOM = '$';
 	const String EMPTY = "";
   public:
@@ -22,8 +23,6 @@ class MessageManager {
 	void addOutboundMsg(String msg);
 	String getInboundMessage();
 	bool availableInboundMsg();
-	void clearInboundMsgs();
-	void clearOutboundMsgs();
 	void parseMessage(String msg, SimpleQueue &queue);
 	void run();
 		

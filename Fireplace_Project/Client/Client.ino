@@ -1,3 +1,5 @@
+#include <QList.h>
+
 // Libraries
 #include <Fan.h>
 #include <ActivityMonitor.h>
@@ -8,7 +10,7 @@
 #include <SimpleTimer.h>
 
 // Input pins
-const int btStatePin = 6; // Pin that indicate connection status
+const int btStatePin = 6; 
 const int heatPin = 7;
 const int coolPin = 8;
 const int pirPin = 5;
@@ -44,71 +46,55 @@ ActivityMonitor activityMonitor(pirPin);
 Fan fan(fanPin);
 
 
+
 class TimerManager {
   private:
     SimpleTimer *timer;
+    QList<int> timerTypeList;
+    QList<int> timerIdList;
+    int timerCnt = 0;
 
   public:
     TimerManager(SimpleTimer &timerIn) {
-      this->timer = &timerIn);
+      this->timer = &timerIn;
     }
 
-    void enableAll(){
-      
+    void addTimer(TimerType timerType, int timerId) {
+      this->timer->disable(timerId);
+      this->timerTypeList.push_back((int)timerType);
+      this->timerIdList.push_back(timerId);
+      timerCnt++;
     }
 
-    void disableAll(){
-      
+    void enableAll() {
+      for (int i = 0; i < timerCnt; i++) {
+        this->timer->enable(timerIdList.get(i));
+      }
+    }
+
+    void disableAll() {
+      for (int i = 0; i < timerCnt; i++) {
+        this->timer->disable(timerIdList.get(i));
+      }
+    }
+
+    void enableTimerByType(TimerType type) {
+      this->timer->enable(timerIdList.get((int) type));
+    }
+
+    void disableTimerByType(TimerType type) {
+      this->timer->disable(timerIdList.get((int) type));
     }
 
     
 
+    int count(){
+      return timerCnt;
+    }
+
 };
+TimerManager timerMngr(timer);
 
-
-
-
-
-int timer1Id;
-int timer2Id;
-int timer3Id;
-int timer4Id;
-int timer5Id;
-int timer6Id;
-
-
-void enableAllTimers(bool enable) {
-  if (enable) {
-    timer.enable(timer1Id);
-    timer.restartTimer(timer1Id);
-    timer.enable(timer2Id);
-    timer.restartTimer(timer2Id);
-    timer.enable(timer3Id);
-    timer.restartTimer(timer3Id);
-    timer.enable(timer4Id);
-    timer.restartTimer(timer4Id);
-    timer.enable(timer5Id);
-    timer.restartTimer(timer5Id);
-    timer.enable(timer6Id);
-    timer.restartTimer(timer6Id);
-  } else {
-    timer.disable(timer1Id);
-    timer.disable(timer2Id);
-    timer.disable(timer3Id);
-    timer.disable(timer4Id);
-    timer.disable(timer5Id);
-    timer.disable(timer6Id);
-  }
-}
-
-void enableMainAppTimer(bool enable) {
-  if (enable) {
-    timer.restartTimer(timer4Id);
-    timer.enable(timer4Id);
-  } else {
-    timer.disable(timer4Id);
-  }
-}
 
 void runTimeout() {
   digitalWrite(heartBtLedPin, LOW);
@@ -126,7 +112,7 @@ class MainApp {
 
 
     void runInitialize() {
-      enableAllTimers(false);
+      timerMngr.enableAll();
       int cntr = 0;
       requestFireStatus();
       requestBattStatus();
@@ -146,7 +132,7 @@ class MainApp {
           cntr++;
         }
       }
-      enableAllTimers(true);
+      timerMngr.enableAll();
     }
 
   public:
@@ -200,7 +186,7 @@ class MainApp {
         if (fireStatus == FireplaceStatus::UNKNOWN
             || battStatus == BatteryStatus::UNKNOWN) {
           runInitialize();
-          enableAllTimers(true);
+          timerMngr.enableAll();
         }
 
 
@@ -232,8 +218,7 @@ class MainApp {
           battStatus = BatteryStatus::UNKNOWN;
           battUpdateCounter = 0;
           fireUpdateCounter = 0;
-          enableAllTimers(false);
-          enableMainAppTimer(true);
+          timerMngr.enableTimerByType(TimerType::MAIN_APP);
         }
         runBluetoothController();
       }
@@ -303,18 +288,18 @@ void setup() {
   runBluetoothController();
 
   // Messaging Timers
-  timer1Id = timer.setInterval(500, processMessages);
-  timer2Id = timer.setInterval(500, runMessageManager);
+  timerMngr.addTimer(TimerType::PROCESS_MSGS, timer.setInterval(500, processMessages));
+  timerMngr.addTimer(TimerType::MSG_MANAGER, timer.setInterval(500, runMessageManager));
 
   // Bluetooth Timer
-  timer3Id = timer.setInterval(500, runBluetoothController);
-
+  timerMngr.addTimer(TimerType::BT_CONTROLLER, timer.setInterval(500, runBluetoothController));
   // Main Timer
-  timer4Id = timer.setInterval(1000, runMainApp);
+  timerMngr.addTimer(TimerType::MAIN_APP, timer.setInterval(1000, runMainApp));
 
   // Sensor Timers
-  timer5Id = timer.setInterval(1000, runThermostat);
-  timer6Id = timer.setInterval(1000, runActivityMonitor);
+  timerMngr.addTimer(TimerType::THERMOSTAT, timer.setInterval(1000, runThermostat));
+  timerMngr.addTimer(TimerType::ACTIVITY_MONITOR, timer.setInterval(1000, runActivityMonitor));
+  timerMngr.disableAll();
 
 
   runMainApp();
