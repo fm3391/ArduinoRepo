@@ -11,7 +11,7 @@ class ActivityMonitor {
 		int pirPin;
 		bool is_Active = false;
 		int counter = 0;
-		const int counterMax = 300;
+		const int counterMax = 100;
 
   public:
 		ActivityMonitor(int pirPinIn);

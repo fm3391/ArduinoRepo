@@ -7,7 +7,7 @@
 #include <Mosfet.h>
 #include <MD10C.h>
 #include <SimpleTimer.h>
-
+#include <BluetoothController.h>
 /*
   Description:
 
@@ -35,54 +35,6 @@ bool lowBatt = false;
 
 SimpleTimer timer;
 SimpleTimer tmpTimer;
-
-class BluetoothController {
-  private:
-    int btStatePin;
-    int btMosfetPin;
-    bool is_Connected;
-    bool is_Enabled;
-
-  public:
-    BluetoothController(int btStatePinIn, int btMosfetPinIn) {
-      this->btStatePin = btStatePinIn;
-      this->btMosfetPin = btMosfetPinIn;
-      this->is_Connected = false;
-      this->is_Enabled = false;
-    }
-
-    void setEnabled(bool enable) {
-      if (enable) {
-        is_Enabled = true;
-        digitalWrite(this->btMosfetPin, HIGH);
-      } else {
-        is_Enabled = false;
-        digitalWrite(this->btMosfetPin, LOW);
-      }
-    }
-
-    bool isEnabled() {
-      return is_Enabled;
-    }
-
-    bool isConnected() {
-      return is_Connected;
-    }
-
-    void run() {
-      int btStatePinVal = digitalRead(this->btStatePin);
-      if(btStatePinVal == 1 && !is_Connected){
-          is_Connected = true;
-          Serial.println("CONNECTED");        
-      }else if(btStatePinVal == 0 && is_Connected){
-          is_Connected = false;
-          Serial.println("DISCONNECTED");
-      }
-    }
-
-
-};
-
 
 ChargeController chargeController(ccRelayPin, ccBattInputPin);
 BluetoothController btController(btStatePin, btMosfetPin);

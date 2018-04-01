@@ -13,11 +13,11 @@
 class Fan {
   private:
     int relayPin;
-    bool isRunning;
+    bool is_Running;
 		
   public:
     Fan(int relayPin);
-    bool fanIsRunning();
+    bool isRunning();
     void start();
     void stop();
 };

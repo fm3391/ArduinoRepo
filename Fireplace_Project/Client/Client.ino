@@ -1,5 +1,3 @@
-#include <QList.h>
-
 // Libraries
 #include <Fan.h>
 #include <ActivityMonitor.h>
@@ -8,9 +6,12 @@
 #include <Enums.h>
 #include <MessageManager.h>
 #include <SimpleTimer.h>
+#include <SimpleQueue.h>
+#include <QList.h>
+#include <TimerManager.h>
 
 // Input pins
-const int btStatePin = 6; 
+const int btStatePin = 6;
 const int heatPin = 7;
 const int coolPin = 8;
 const int pirPin = 5;
@@ -37,62 +38,12 @@ const String CMD_FIRE_OFF_MSG = String((int)MessageType::CMD) + SEPERATOR +
 
 
 
-
 SimpleTimer timer;
 MessageManager messageManager;
 BluetoothController btController(btStatePin, -99);
 Thermostat thermostat(heatPin, coolPin);
 ActivityMonitor activityMonitor(pirPin);
 Fan fan(fanPin);
-
-
-
-class TimerManager {
-  private:
-    SimpleTimer *timer;
-    QList<int> timerTypeList;
-    QList<int> timerIdList;
-    int timerCnt = 0;
-
-  public:
-    TimerManager(SimpleTimer &timerIn) {
-      this->timer = &timerIn;
-    }
-
-    void addTimer(TimerType timerType, int timerId) {
-      this->timer->disable(timerId);
-      this->timerTypeList.push_back((int)timerType);
-      this->timerIdList.push_back(timerId);
-      timerCnt++;
-    }
-
-    void enableAll() {
-      for (int i = 0; i < timerCnt; i++) {
-        this->timer->enable(timerIdList.get(i));
-      }
-    }
-
-    void disableAll() {
-      for (int i = 0; i < timerCnt; i++) {
-        this->timer->disable(timerIdList.get(i));
-      }
-    }
-
-    void enableTimerByType(TimerType type) {
-      this->timer->enable(timerIdList.get((int) type));
-    }
-
-    void disableTimerByType(TimerType type) {
-      this->timer->disable(timerIdList.get((int) type));
-    }
-
-    
-
-    int count(){
-      return timerCnt;
-    }
-
-};
 TimerManager timerMngr(timer);
 
 
@@ -106,13 +57,13 @@ class MainApp {
     FireplaceStatus fireStatus = FireplaceStatus::UNKNOWN;
     BatteryStatus battStatus = BatteryStatus::UNKNOWN;
     int battUpdateCounter = 0;
-    const int battUpdateCounterMax = 60;
+    const int battUpdateCounterMax = 20;
     int fireUpdateCounter = 0;
-    const int fireUpdateCounterMax = 5;
+    const int fireUpdateCounterMax = 10;
 
-
+    //
     void runInitialize() {
-      timerMngr.enableAll();
+      timerMngr.disableAll();
       int cntr = 0;
       requestFireStatus();
       requestBattStatus();
@@ -172,26 +123,71 @@ class MainApp {
       TODO - Add comment here
     */
     void run() {
+
+      // TODO - explain this
       if (!isInit) {
         while (!btController.isConnected()) {
           runBluetoothController();
           delay(500);
         }
+        // Run Initialization
         runInitialize();
         isInit = true;
       }
 
       // Check to see if the Bluetooth module is connected
       if (btController.isConnected()) {
+
+        // This method runs if the bluetooth connection was restored
         if (fireStatus == FireplaceStatus::UNKNOWN
             || battStatus == BatteryStatus::UNKNOWN) {
           runInitialize();
-          timerMngr.enableAll();
         }
+        if (activityMonitor.isActive()) {
 
+          // This area gets run if the activity monitor shows the room is ACTIVE
+          if (thermostat.getMode() == ThermostatMode::OFF) {
+            if (fireStatus == FireplaceStatus::RUNNING) {
+              messageManager.addOutboundMsg(CMD_FIRE_OFF_MSG);
+              messageManager.addOutboundMsg(REQ_FIRE_STATUS_MSG);
+            }
+            if (fan.isRunning()) {
+              fan.stop();
+            }
+          } else {
 
+            // TODO - explain this
+            if (thermostat.getMode() == ThermostatMode::HEATING) {
+              if (fireStatus == FireplaceStatus::OFF) {
+                messageManager.addOutboundMsg(CMD_FIRE_ON_MSG);
+                messageManager.addOutboundMsg(REQ_FIRE_STATUS_MSG);
+              }
+              if (!fan.isRunning()) {
+                fan.start();
+              }
+            }
 
-
+            // TODO - explain this
+            if (thermostat.getMode() == ThermostatMode::COOLING) {
+              if (fireStatus == FireplaceStatus::RUNNING) {
+                messageManager.addOutboundMsg(CMD_FIRE_ON_MSG);
+                messageManager.addOutboundMsg(REQ_FIRE_STATUS_MSG);
+              }
+              if (!fan.isRunning()) {
+                fan.start();
+              }
+            }
+          }
+        } else {
+          // This area gets run if the activity monitor shows the room is INACTIVE
+          if(fireStatus == FireplaceStatus::RUNNING){
+            messageManager.addOutboundMsg(CMD_FIRE_OFF_MSG);
+            messageManager.addOutboundMsg(REQ_FIRE_STATUS_MSG);
+          }
+          if(fan.isRunning()){
+            fan.stop();
+          }        
+        }
 
 
 
@@ -203,7 +199,7 @@ class MainApp {
           battUpdateCounter = 0;
         }
 
-
+        // Request update on fire status
         if (fireUpdateCounter < fireUpdateCounterMax) {
           fireUpdateCounter++;
         } else {
@@ -211,15 +207,22 @@ class MainApp {
           fireUpdateCounter = 0;
         }
 
-
       } else {
+        
         if (fireStatus != FireplaceStatus::UNKNOWN ||  battStatus != BatteryStatus::UNKNOWN) {
           fireStatus = FireplaceStatus::UNKNOWN;
           battStatus = BatteryStatus::UNKNOWN;
           battUpdateCounter = 0;
           fireUpdateCounter = 0;
-          timerMngr.enableTimerByType(TimerType::MAIN_APP);
+          timerMngr.enableTimerByType((int) TimerType::MAIN_APP);
         }
+        if(thermostat.getMode() == ThermostatMode::COOLING && !fan.isRunning()){
+          fan.start();
+        }else if(thermostat.getMode() == ThermostatMode::OFF && fan.isRunning()){
+          fan.stop();
+        }
+        
+        
         runBluetoothController();
       }
     }
@@ -227,6 +230,10 @@ class MainApp {
 
 MainApp mainApp;
 
+
+/**
+   Define methods to be run by timers
+*/
 void processMessages() {
   // Check if a message ready to be processed
   while (messageManager.availableInboundMsg()) {
@@ -288,20 +295,23 @@ void setup() {
   runBluetoothController();
 
   // Messaging Timers
-  timerMngr.addTimer(TimerType::PROCESS_MSGS, timer.setInterval(500, processMessages));
-  timerMngr.addTimer(TimerType::MSG_MANAGER, timer.setInterval(500, runMessageManager));
+  timerMngr.addTimer((int)TimerType::PROCESS_MSGS, timer.setInterval(500, processMessages));
+  timerMngr.addTimer((int)TimerType::MSG_MANAGER, timer.setInterval(500, runMessageManager));
 
   // Bluetooth Timer
-  timerMngr.addTimer(TimerType::BT_CONTROLLER, timer.setInterval(500, runBluetoothController));
+  timerMngr.addTimer((int)TimerType::BT_CONTROLLER, timer.setInterval(500, runBluetoothController));
   // Main Timer
-  timerMngr.addTimer(TimerType::MAIN_APP, timer.setInterval(1000, runMainApp));
+  timerMngr.addTimer((int)TimerType::MAIN_APP, timer.setInterval(1000, runMainApp));
 
   // Sensor Timers
-  timerMngr.addTimer(TimerType::THERMOSTAT, timer.setInterval(1000, runThermostat));
-  timerMngr.addTimer(TimerType::ACTIVITY_MONITOR, timer.setInterval(1000, runActivityMonitor));
+  timerMngr.addTimer((int)TimerType::THERMOSTAT, timer.setInterval(1000, runThermostat));
+  timerMngr.addTimer((int)TimerType::ACTIVITY_MONITOR, timer.setInterval(1000, runActivityMonitor));
   timerMngr.disableAll();
 
-
+  // Do pre-initialization runs
+  runThermostat();
+  runActivityMonitor();
+  // Run the Main App
   runMainApp();
 }
 
