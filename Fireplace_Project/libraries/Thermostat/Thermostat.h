@@ -7,19 +7,16 @@
 #define Thermostat_h
 
 #include "Arduino.h"
-#include "Enums.h"
 
 class Thermostat {
   private:
-	int heatPin;
-    int coolPin;
-    int fanPin;
-	ThermostatMode mode;
+		byte heatPin;
+		bool is_Heating;
 
   public:
-	Thermostat(int heatPin, int coolPin);
-	ThermostatMode getMode();
-	void run();
+		Thermostat(byte heatPinIn);
+		bool isHeating();
+		void run();
 };
 
 #endif

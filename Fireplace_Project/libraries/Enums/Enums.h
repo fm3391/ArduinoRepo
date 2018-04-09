@@ -6,25 +6,16 @@
 
 
 enum class TimerType{
-	PROCESS_MSGS = 0,
-	MSG_MANAGER = 1,
-	BT_CONTROLLER = 2,
-	MAIN_APP = 3,
-	THERMOSTAT = 4,
-	ACTIVITY_MONITOR = 5
-};
-
-/*
-
-*/
-enum class ThermostatMode {
-  OFF = 0, HEATING = 1, COOLING = 2
+	MAIN_CLASS = 0,
+	THERMOSTAT = 1,
+	ACTIVITY_MONITOR = 2,
+	CHARGECONTROLLER = 3
 };
 /*
 
 */
 enum class FireplaceStatus {
-  OFF = 0, RUNNING = 1, UNKNOWN = 99
+  OFF = 0, RUNNING = 1
 };
 
 /*
@@ -33,30 +24,11 @@ enum class FireplaceStatus {
 enum class BatteryStatus {
   LOW_BATT = 0, WARNING = 1, GOOD = 2, FULL = 3, UNKNOWN = 99
 };
-/*
 
 /*
 
 */
 enum class SystemMode {
   OVERRIDE = 0, NORMAL = 1
-};
-/*
-
-*/
-enum class MessageType {
-  REQ = 0, CMD =1 , INFO = 2,HRBT = 3, UNKNOWN = 99
-};
-/*
-
-*/
-enum class MessageSpecifier {
-  BATT = 0, FIRE = 1, CHARGE = 2, UNKNOWN = 99
-};
-/*
-
-*/
-enum class MessageCmd {
-  FIRE_OFF = 0, FIRE_ON = 1
 };
 #endif

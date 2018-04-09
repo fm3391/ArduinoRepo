@@ -17,7 +17,6 @@ ChargeController::ChargeController(int relayCtrlPin, int batteryInputPin) {
 void ChargeController::updateVoltage(){
 	int inputVal = analogRead(batteryInputPin);
 	this->voltage = (float)inputVal/(float)1023 * nominalVoltage;
-	//Serial.println(String(this->voltage));
 }
 
 BatteryStatus ChargeController::getBatteryStatus(){
@@ -45,7 +44,7 @@ void ChargeController::run(){
 		if(chargeCounter == chargeCounterMax){
 			disableCharging();
 			updateVoltage();
-			if(this->voltage < nominalVoltage){
+			if(this->voltage < minimumChargeVoltage){
 				enableCharging();
 				chargeCounter = 5;
 			}else{

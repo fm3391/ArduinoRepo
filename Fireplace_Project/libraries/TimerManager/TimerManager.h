@@ -15,7 +15,9 @@ class TimerManager {
     SimpleTimer *timer;
     QList<int> timerTypeList;
     QList<int> timerIdList;
+		const int resetCnt = 1000;
     int timerCnt = 0;
+		int runCounter = 0;
 
   public:
     TimerManager(SimpleTimer &timerIn) {
@@ -64,12 +66,20 @@ class TimerManager {
       this->timer->disable(timerIdList.get(type));
     }
 
-    
-
     int count(){
       return timerCnt;
     }
-
+		
+		void run(){
+			if(runCounter >= resetCnt){
+				disableAll();
+				restartAll();
+				enableAll();
+				
+				runCounter = 0;
+			}
+			runCounter++;
+		}
 };
 
 
