@@ -12,5 +12,4 @@ void setup() {
 void loop() {
   chargeController.run();
   delay(1000);
-  Serial.println(String(chargeController.getVoltage()));
 }

@@ -18,7 +18,7 @@ class ChargeController {
 		bool isCharging = false;
 		const float nominalVoltage = 11.85;
 		const float minimumChargeVoltage = 11.25;
-		const float minVoltage = 10.00;
+		const float minVoltage = 10.50;
 		int chargeCounter = 0;
 		const int chargeCounterMax = 20;
 		float voltage = 0.00;
